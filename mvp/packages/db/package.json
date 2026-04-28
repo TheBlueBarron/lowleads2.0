@@ -1,0 +1,24 @@
+{
+  "name": "@lowleads/db",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/client.js",
+  "types": "./dist/client.d.ts",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "migrate:up": "node-pg-migrate --migrations-dir migrations --database-url-var DATABASE_URL up",
+    "migrate:down": "node-pg-migrate --migrations-dir migrations --database-url-var DATABASE_URL down",
+    "migrate:create": "node-pg-migrate --migrations-dir migrations create"
+  },
+  "dependencies": {
+    "pg": "^8.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/pg": "^8.11.6",
+    "node-pg-migrate": "^7.5.2",
+    "typescript": "*"
+  }
+}

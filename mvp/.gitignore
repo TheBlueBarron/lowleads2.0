@@ -1,0 +1,29 @@
+node_modules/
+dist/
+.next/
+.turbo/
+coverage/
+*.log
+.env
+.env.local
+.env.*.local
+*.pem
+.DS_Store
+Thumbs.db
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+!terraform/environments/*/terraform.tfvars.example
+.terraform.lock.hcl
+
+# Test artifacts
+junit.xml
+test-results/
+
+# IDE
+.vscode/
+.idea/
+*.swp
