@@ -1,0 +1,34 @@
+Phase 2 is complete. Here's what was built:               
+                                                                                                                                                                                                                                              
+  ---                                                       
+  New files created (35 total):                                                                                                                                                                                                               
+                                                            
+  ┌────────────────────┬───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐                      
+  │        Area        │                                                                                             Files                                                                                             │
+  ├────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ DB migrations      │ 013_stripe_webhook_events.sql, 014_notification_preferences.sql                                                                                                                               │
+  ├────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Stripe lib         │ src/lib/stripe.ts (singleton + price IDs)                                                                                                                                                     │
+  ├────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Company service    │ schema, service, routes — GET/PATCH profile, escrow balance + paginated history                                                                                                               │
+  ├────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Technician service │ schema, service, routes — create (tier-gated to Pro+), list, PATCH                                                                                                                            │
+  ├────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Listing service    │ schema, service, routes — CRUD, activate (escrow reserve), pause (return unused escrow), archive, full-text search via search_vector                                                          │
+  ├────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Lead service       │ schema, service, routes — submit (PII encrypted, concurrency check, self-referral blocked), list, get (PII decrypted for receiver only, marks viewed), update status (full escrow accounting) │
+  ├────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Stripe service     │ schema, service, routes — deposit checkout, subscription checkout, billing portal, idempotent webhook handler                                                                                 │
+  ├────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Notifications      │ schema, service, routes — GET/PATCH preferences (new_lead, lead_resolved, low_escrow)                                                                                                         │
+  ├────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Email templates    │ buildNewLeadEmail, buildLeadResolvedEmail, buildLowEscrowEmail added to lib/email.ts                                                                                                          │
+  ├────────────────────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ Tests              │ Integration: listings routes, leads routes; Unit: escrow fee calculation                                                                                                                      │
+  └────────────────────┴───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+  Key design decisions:
+  - Escrow is fully ledger-based: every cent movement has an escrow_transactions row — append-only, auditable
+  - Stripe payouts to submitters (RELEASE → Stripe Transfer) are recorded in the ledger but the actual transfer is deferred to Phase 3 (requires submitters to onboard Stripe Connect)
+  - Webhook endpoint uses a scoped child context so its Buffer content-type parser doesn't override the global JSON parser
+  - All PII (phone, email, notes) encrypted with KMS envelope encryption before DB insert; decrypted only when the receiving company fetches the lead detail

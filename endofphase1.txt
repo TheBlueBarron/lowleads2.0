@@ -1,0 +1,77 @@
+phase 1 is complete. Here's everything that was built — 75 files across the full stack:                                                                                                                                                   
+                                                                                                                                                                                                                                              
+  ---                                                                                                                                                                                                                                       
+  What was built                                                                                                                                                                                                                              
+                                                            
+  Monorepo (pnpm + Turborepo)                                                                                                                                                                                                                 
+                                                            
+  apps/api       — Fastify 4 TypeScript API
+  apps/web       — Bare Next.js 14 shell (Phase 3)
+  packages/db    — node-pg-migrate + pg Pool client
+  packages/shared-types — All enums, entity types, API types
+
+  Database migrations (packages/db/migrations/)
+
+  12 migration files in dependency order:
+  - 001 — Extensions (pgcrypto, pg_trgm, btree_gin)
+  - 002 — All 6 ENUMs
+  - 003–009 — All 7 tables (companies → audit_log), each with set_updated_at triggers
+  - 010 — 15 indexes matching the spec exactly (GIN for FTS, compound for inbox queries)
+  - 011 — RLS on all 7 tables with isolation policies + a lowleads_api non-superuser role
+  - 012 — Close rate trigger: PostgreSQL-maintained computed column on companies.close_rate_bps, fires on every lead status transition to a terminal state
+
+  Append-only is enforced at the database level via triggers on escrow_transactions and audit_log — not just application-layer convention.
+
+  Auth service (apps/api/src/services/auth/)
+
+  All 8 spec endpoints with full security posture:
+
+  ┌─────────────────────────────┬─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+  │          Endpoint           │                                                                 Key security detail                                                                 │
+  ├─────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ POST /auth/register         │ Atomically creates company + user in a transaction; fires email verification async                                                                  │
+  ├─────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ POST /auth/login            │ IP rate limit checked first (20/10min → 1hr block), account lockout (5 attempts, exponential backoff), constant-time dummy hash when user not found │
+  ├─────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ POST /auth/refresh          │ Token family:value split — Argon2id hash stored in Redis; invalid token deletes entire family (theft detection)                                     │
+  ├─────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ POST /auth/logout           │ Deletes Redis key; silent on bad token                                                                                                              │
+  ├─────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ POST /auth/verify-email     │ JWT with JTI replay prevention in Redis                                                                                                             │
+  ├─────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ POST /auth/mfa/setup        │ KMS envelope-encrypted TOTP secret, QR code URI returned                                                                                            │
+  ├─────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ POST /auth/mfa/verify       │ Enables MFA; returns 8 backup codes (only time shown); codes hashed with Argon2id                                                                   │
+  ├─────────────────────────────┼─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+  │ POST /auth/password/reset-* │ Always 200 on request (no email oracle); JTI consumed on use                                                                                        │
+  └─────────────────────────────┴─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+  Terraform
+
+  - terraform/bootstrap/ — S3 state bucket + DynamoDB lock table (run once before everything else)
+  - 7 reusable modules — vpc, ecs, rds, elasticache, s3, secrets, cloudfront
+  - 2 environments — staging (auto-deploy on main) + production (manual approval gate in GitHub Environments)
+  - KMS customer-managed key created for field-level encryption; all 7 Secrets Manager secrets provisioned with lifecycle { ignore_changes = [secret_string] } so real values don't get overwritten by Terraform
+
+  CI Pipeline (.github/workflows/ci.yml)
+
+  5 jobs: lint → typecheck → unit-tests + integration-tests + security → docker-build → deploy-staging → deploy-production (manual gate). OIDC throughout — no long-lived AWS keys anywhere.
+
+  ---
+  To get started locally
+
+  1. Bootstrap Terraform state (once):
+  cd terraform/bootstrap
+  terraform init && terraform apply -var="aws_account_id=YOUR_ID"
+  2. Start test services and run migrations:
+  docker compose -f docker-compose.test.yml up -d
+  DATABASE_URL=postgresql://lowleads_test:lowleads_test@localhost:5433/lowleads_test \
+    pnpm --filter @lowleads/db migrate:up
+  3. Run tests:
+  pnpm install
+  pnpm --filter @lowleads/api test          # unit tests
+  pnpm --filter @lowleads/api test:integration  # integration tests
+  4. Local API (requires .env.local with the secrets listed in src/lib/secrets.ts):
+  pnpm --filter @lowleads/api dev
+
+  Confirm Phase 1 is working and I'll move to Phase 2: listing service, Stripe Connect + escrow, lead submission with PII encryption, and the notification queue.

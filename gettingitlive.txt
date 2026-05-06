@@ -1,0 +1,140 @@
+1. Git Repository (Not initialized)                                                                                                                                             
+                                                                                                                                                                                  
+  There's no .git directory. You need to:                                                                                                                                         
+  git init                                                                                                                                                                        
+  git add .                                                                                                                                                                       
+  git commit -m "Initial commit"                                                                                                                                                  
+  Then create a GitHub repo and push.                                                                                                                                             
+                                                                                                                                                                                  
+  2. GitHub Actions Secrets
+
+  The existing ci.yml workflow deploys to AWS via ECS. It will need these secrets set in your GitHub repo settings (Settings → Secrets and variables → Actions):
+
+  ┌─────────────────────────┬──────────────────────────────────┐
+  │         Secret          │             Purpose              │
+  ├─────────────────────────┼──────────────────────────────────┤
+  │ AWS_ROLE_ARN            │ OIDC role for AWS authentication │
+  ├─────────────────────────┼──────────────────────────────────┤
+  │ AWS_REGION              │ e.g. us-east-1                   │
+  ├─────────────────────────┼──────────────────────────────────┤
+  │ ECR_REGISTRY            │ AWS ECR registry URL             │
+  ├─────────────────────────┼──────────────────────────────────┤
+  │ ECR_REPOSITORY_API      │ ECR repo name for the API        │
+  ├─────────────────────────┼──────────────────────────────────┤
+  │ ECS_CLUSTER             │ ECS cluster name                 │
+  ├─────────────────────────┼──────────────────────────────────┤
+  │ ECS_SERVICE_API         │ ECS service name                 │
+  ├─────────────────────────┼──────────────────────────────────┤
+  │ ECS_TASK_DEFINITION_API │ Task definition name             │
+  ├─────────────────────────┼──────────────────────────────────┤
+  │ STAGING_API_URL         │ For smoke tests                  │
+  ├─────────────────────────┼──────────────────────────────────┤
+  │ PROD_API_URL            │ For health checks                │
+  └─────────────────────────┴──────────────────────────────────┘
+
+  3. AWS Infrastructure (Terraform not applied)
+
+  The Terraform configs exist but haven't been provisioned. You need to:
+  1. Run terraform apply in terraform/bootstrap/ first (creates the S3 state bucket)
+  2. Run terraform apply in terraform/environments/staging/ for staging
+  3. Run terraform apply in terraform/environments/production/ for prod
+
+  4. No README.md
+
+  GitHub repos display a README — worth adding before going public.
+
+  ---
+  Important Caveat — GitHub Pages won't work for this app
+
+  GitHub Pages only hosts static files. This app has:
+  - A Fastify API server
+  - PostgreSQL database
+  - Redis cache
+
+  So "GitHub hosting" here means GitHub + GitHub Actions CI/CD → AWS (which is what the existing ci.yml is already built for). The code lives on GitHub; the app runs on AWS.
+
+  ---
+  Quickest Path to Live
+
+  1. git init + initial commit + push to GitHub
+  2. Provision AWS infrastructure via Terraform
+  3. Add the GitHub Actions secrets listed above
+  4. Push to main — the CI/CD pipeline will build and deploy automatically
+
+  Want me to help with any of these steps (e.g., walk through the Terraform bootstrap, generate the git setup commands, or read the ci.yml to confirm the exact secrets needed)?
+
+
+
+
+
+
+
+
+Deployment Procedure                                                                                                                                                            
+                                                                                          ────────────────────────────────────────────────────────────────────────────────────────
+  1. Prerequisites                                                                                                                                                                
+                                                                                                                                                                                  
+  Install locally:                                                                                                                                                                
+  - https://nodejs.org and https://pnpm.io                                                                                                                                        
+  - https://aws.amazon.com/cli/                                                                                                                                                   
+  - https://terraform.io                                                                                                                                                          
+  - https://docker.com
+
+  2. Bootstrap AWS (one-time)
+
+  aws configure   # enter your AWS access key, secret, region
+
+  cd terraform/bootstrap
+  terraform init
+  terraform apply
+  This creates the ECR repo, S3 state bucket, and GitHub OIDC IAM role.
+
+  3. Add GitHub Secrets
+
+  In your GitHub repo → Settings → Secrets → Actions, add:
+  - AWS_ACCOUNT_ID
+  - AWS_REGION
+  - AWS_OIDC_ROLE_ARN (output from step 2)
+
+  4. Provision Staging Infrastructure
+
+  cd terraform/environments/staging
+  cp terraform.tfvars.example terraform.tfvars
+  # edit terraform.tfvars — fill in account ID, DB password, image tag
+  terraform init
+  terraform apply
+  This provisions VPC, RDS (PostgreSQL), ElastiCache (Redis), ECS cluster, ALB, and CloudFront.
+
+  5. Populate AWS Secrets Manager
+
+  After Terraform applies, store your runtime secrets (JWT secret, Stripe keys, etc.) in the AWS Secrets Manager entries that Terraform created. You can do this via the AWS
+  Console or CLI.
+
+  6. Run Database Migrations
+
+  DATABASE_URL="<your-rds-connection-string>" pnpm --filter @lowleads/db migrate:up
+
+  7. Deploy the API
+
+  Push to main:
+  git push origin main
+  GitHub Actions will automatically:
+  - Lint, typecheck, test
+  - Build the Docker image and push to ECR
+  - Deploy to ECS Fargate (staging)
+  - Smoke-test the /health endpoint
+
+  Production deploy requires manual approval in the GitHub Actions UI after staging passes.
+
+  8. Deploy the Web Frontend
+
+  The Next.js app isn't wired into the ECS pipeline — the easiest path is Vercel:
+  1. Go to https://vercel.com → Import Git Repository
+  2. Set root directory to apps/web
+  3. Add env var: NEXT_PUBLIC_API_URL=<your ALB or API domain>
+  4. Deploy
+
+  ---
+  Rough order of effort: Steps 2 and 4 (Terraform) take the most time the first run (~15–20 min). After that, every git push origin main handles the API redeploy automatically.
+
+  Want me to look at any specific step in more detail?

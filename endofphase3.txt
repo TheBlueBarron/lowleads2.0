@@ -1,0 +1,31 @@
+Phase 3 is complete. Here's what was built:                                                                                                                                                                                                 
+                                                                                                                                                                                                                                              
+  Infrastructure (8 files)                                                                                                                                                                                                                    
+  - Tailwind CSS + PostCSS + path alias @/* → src/*                                                                                                                                                                                           
+  - Middleware: protects all non-public routes by checking ll_at cookie                                                                                                                                                                     
+  - src/lib/api.ts: typed fetch client with automatic 401→refresh→retry, token cookie helpers, JWT decoder                                                                                                                                    
+  - src/lib/auth.tsx: AuthProvider + useAuth hook (login, logout, token state)                                                                                                                                                                
+  - src/lib/utils.ts: cn(), formatCents(), formatDate(), slugify()
+
+  UI component library
+  - Button, Input/Textarea/Select, Badge (with LeadStatusBadge, ListingStatusBadge, TierBadge variants), Alert, Spinner/PageSpinner, Card/StatCard/EmptyState
+  - Sidebar: dark gray-900 nav with active highlighting, user info, sign out
+
+  Pages (14 routes)
+  - /login — email/password + inline MFA step (shows 6-digit input on MFA error)
+  - /register — auto-slugifies company name
+  - /verify-email, /forgot-password, /reset-password
+  - /dashboard — escrow balance, pending leads, active listings, recent transactions
+  - /listings — status-tab filtered table with activate/pause/archive inline actions
+  - /listings/new, /listings/[id]/edit
+  - /browse — full-text + service area search with listing cards
+  - /browse/[id] — listing detail + submit lead form (PII-encrypted customer info)
+  - /leads — receiver/submitter toggle, status filter, unread dot indicator
+  - /leads/[id] — full PII display + sale/no_sale/not_qualified outcome buttons
+  - /settings — company profile edit + notification preferences toggles
+  - /settings/escrow — balance summary + Stripe deposit, full transaction history
+  - /settings/billing — tier comparison + upgrade flow + Stripe portal
+
+  Typecheck passes clean. To start: pnpm --filter @lowleads/web dev (API must be running on port 3001).
+
+✻ Cogitated for 18m 52s
