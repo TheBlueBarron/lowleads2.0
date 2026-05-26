@@ -1,8 +1,11 @@
 # ─── ECR Repository ───────────────────────────────────────────────────────────
 
 resource "aws_ecr_repository" "api" {
-  name                 = "${var.project}/${var.environment}/api"
-  image_tag_mutability = "IMMUTABLE"
+  name = "${var.project}/${var.environment}/api"
+  # MUTABLE so :latest can be moved by each CI push. SHA-tagged images
+  # are still uniquely addressable for rollback; ECS resolves :latest
+  # to the most recently pushed digest.
+  image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {
     scan_on_push = true
