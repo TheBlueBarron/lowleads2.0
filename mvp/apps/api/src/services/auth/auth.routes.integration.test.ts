@@ -52,12 +52,18 @@ afterAll(async () => {
 
 beforeEach(async () => {
   // Clean test data between tests — order matters (FK constraints).
-  // TRUNCATE on append-only tables (audit_log) bypasses the no-DELETE trigger.
+  // Other test files (leads, listings) may have left behind rows that
+  // reference our users/companies, so we have to clear those first.
+  // TRUNCATE on append-only tables bypasses their no-DELETE triggers.
   const pool = getPrimaryPool();
   await pool.query(`
+    DELETE FROM leads;
+    TRUNCATE escrow_transactions RESTART IDENTITY CASCADE;
+    DELETE FROM service_listings;
+    DELETE FROM technicians;
     TRUNCATE audit_log RESTART IDENTITY CASCADE;
-    DELETE FROM users WHERE email LIKE '%@test.example.com';
-    DELETE FROM companies WHERE slug LIKE 'test-%';
+    DELETE FROM users WHERE email LIKE '%@test.example.com' OR email LIKE '%@example.com';
+    DELETE FROM companies WHERE slug LIKE 'test-%' OR slug LIKE 'lead-%' OR slug LIKE '%-test-%';
   `);
 });
 

@@ -51,6 +51,8 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  // Clean every test-affected table so a stale row from another test file
+  // can't block FK-dependent cleanup here. Order matters (FK constraints).
   // TRUNCATE on append-only tables bypasses their no-DELETE triggers.
   const pool = getPrimaryPool();
   await pool.query(`
@@ -58,9 +60,9 @@ beforeEach(async () => {
     TRUNCATE escrow_transactions RESTART IDENTITY CASCADE;
     DELETE FROM service_listings;
     DELETE FROM technicians;
-    DELETE FROM users WHERE email LIKE '%@test.example.com';
-    DELETE FROM companies WHERE slug LIKE '%-test-%' OR slug = 'listing-test-co';
     TRUNCATE audit_log RESTART IDENTITY CASCADE;
+    DELETE FROM users WHERE email LIKE '%@test.example.com' OR email LIKE '%@example.com';
+    DELETE FROM companies WHERE slug LIKE '%-test-%' OR slug = 'listing-test-co' OR slug LIKE 'test-%' OR slug LIKE 'lead-%';
   `);
 });
 
