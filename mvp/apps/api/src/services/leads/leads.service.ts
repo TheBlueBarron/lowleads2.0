@@ -1,11 +1,6 @@
 import type { Pool, PoolClient } from 'pg';
 import type { FastifyBaseLogger } from 'fastify';
-import {
-  NotFoundError,
-  ConflictError,
-  ValidationError,
-  ForbiddenError,
-} from '../../lib/errors.js';
+import { NotFoundError, ConflictError, ValidationError, ForbiddenError } from '../../lib/errors.js';
 import { encryptField, decryptField } from '../../lib/crypto.js';
 import { sendEmail, buildNewLeadEmail, buildLeadResolvedEmail } from '../../lib/email.js';
 import { MINIMUM_FEE_CENTS } from '@lowleads/shared-types';
@@ -82,9 +77,7 @@ export class LeadService {
         throw new ValidationError('This listing is not currently accepting leads');
       }
       if (listing.active_lead_count >= listing.max_concurrent_sales) {
-        throw new ConflictError(
-          'This listing has reached its maximum concurrent pending leads',
-        );
+        throw new ConflictError('This listing has reached its maximum concurrent pending leads');
       }
 
       // A company cannot submit leads to its own listing
@@ -147,8 +140,8 @@ export class LeadService {
       await client.query('COMMIT');
 
       // Notify the receiving company owner (fire-and-forget)
-      this.sendNewLeadNotification(client, listing.company_id, lead.id).catch(
-        (err: unknown) => this.deps.log.error({ err }, 'New lead notification failed'),
+      this.sendNewLeadNotification(client, listing.company_id, lead.id).catch((err: unknown) =>
+        this.deps.log.error({ err }, 'New lead notification failed'),
       );
 
       return this.toSummary(lead);
@@ -171,9 +164,7 @@ export class LeadService {
     if (opts.role === 'receiver') {
       clauses.push('l.receiving_company_id = $1');
     } else if (opts.role === 'submitter') {
-      clauses.push(
-        `l.submitter_user_id IN (SELECT id FROM users WHERE company_id = $1)`,
-      );
+      clauses.push(`l.submitter_user_id IN (SELECT id FROM users WHERE company_id = $1)`);
     } else {
       // Both by default
       clauses.push(
@@ -217,10 +208,7 @@ export class LeadService {
   // ─── Get (with PII decryption for receiver) ─────────────────────────────────
 
   async get(companyId: string, leadId: string, isReceiver: boolean) {
-    const result = await this.deps.db.query<LeadRow>(
-      `SELECT * FROM leads WHERE id = $1`,
-      [leadId],
-    );
+    const result = await this.deps.db.query<LeadRow>(`SELECT * FROM leads WHERE id = $1`, [leadId]);
     const lead = result.rows[0];
     if (!lead) throw new NotFoundError('Lead');
 
@@ -233,10 +221,7 @@ export class LeadService {
 
     // Mark as viewed by receiver on first open
     if (isReceiverOfLead && !lead.viewed_at) {
-      await this.deps.db.query(
-        'UPDATE leads SET viewed_at = NOW() WHERE id = $1',
-        [leadId],
-      );
+      await this.deps.db.query('UPDATE leads SET viewed_at = NOW() WHERE id = $1', [leadId]);
       lead.viewed_at = new Date();
     }
 
@@ -288,10 +273,9 @@ export class LeadService {
       const companyResult = await client.query<{
         escrow_balance_cents: number;
         transaction_fee_bps: number;
-      }>(
-        'SELECT escrow_balance_cents, transaction_fee_bps FROM companies WHERE id = $1',
-        [companyId],
-      );
+      }>('SELECT escrow_balance_cents, transaction_fee_bps FROM companies WHERE id = $1', [
+        companyId,
+      ]);
       const company = companyResult.rows[0];
       if (!company) throw new NotFoundError('Company');
 
@@ -303,10 +287,10 @@ export class LeadService {
       }
 
       // Update lead status (DB trigger enforces terminal state immutability)
-      await client.query(
-        `UPDATE leads SET status = $1, resolved_at = NOW() WHERE id = $2`,
-        [newStatus, leadId],
-      );
+      await client.query(`UPDATE leads SET status = $1, resolved_at = NOW() WHERE id = $2`, [
+        newStatus,
+        leadId,
+      ]);
 
       // Decrement listing active_lead_count
       await client.query(
@@ -334,8 +318,8 @@ export class LeadService {
       await client.query('COMMIT');
 
       // Notify submitter of resolution (fire-and-forget)
-      this.sendLeadResolvedNotification(lead, newStatus).catch(
-        (err: unknown) => this.deps.log.error({ err }, 'Lead resolved notification failed'),
+      this.sendLeadResolvedNotification(lead, newStatus).catch((err: unknown) =>
+        this.deps.log.error({ err }, 'Lead resolved notification failed'),
       );
 
       return { id: leadId, status: newStatus };
@@ -416,12 +400,7 @@ export class LeadService {
     await client.query(
       `INSERT INTO escrow_transactions (company_id, lead_id, type, amount_cents, balance_after_cents)
        VALUES ($1, $2, 'refund', $3, $4)`,
-      [
-        companyId,
-        lead.id,
-        lead.reward_cents,
-        balResult.rows[0]?.escrow_balance_cents ?? 0,
-      ],
+      [companyId, lead.id, lead.reward_cents, balResult.rows[0]?.escrow_balance_cents ?? 0],
     );
   }
 
@@ -458,15 +437,10 @@ export class LeadService {
         fromEmail: this.deps.sesFromEmail,
         appUrl: this.deps.appUrl,
       }),
-    ).catch((err: unknown) =>
-      this.deps.log.error({ err }, 'Failed to send new lead email'),
-    );
+    ).catch((err: unknown) => this.deps.log.error({ err }, 'Failed to send new lead email'));
   }
 
-  private async sendLeadResolvedNotification(
-    lead: LeadRow,
-    status: string,
-  ): Promise<void> {
+  private async sendLeadResolvedNotification(lead: LeadRow, status: string): Promise<void> {
     const prefResult = await this.deps.db.query<{
       email: string;
       email_lead_resolved: boolean;
@@ -488,9 +462,7 @@ export class LeadService {
         rewardCents: lead.reward_cents,
         appUrl: this.deps.appUrl,
       }),
-    ).catch((err: unknown) =>
-      this.deps.log.error({ err }, 'Failed to send lead resolved email'),
-    );
+    ).catch((err: unknown) => this.deps.log.error({ err }, 'Failed to send lead resolved email'));
   }
 
   private toSummary(row: LeadRow) {

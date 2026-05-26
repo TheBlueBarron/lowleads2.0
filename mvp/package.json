@@ -8,8 +8,8 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "test:integration": "turbo run test:integration",
-    "format": "prettier --write \"**/*.{ts,tsx,js,json,sql}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,json,sql}\""
+    "format": "prettier --write \"**/*.{ts,tsx,js,json}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,json}\""
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.18.0",

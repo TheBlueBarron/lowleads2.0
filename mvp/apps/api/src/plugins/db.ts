@@ -1,5 +1,6 @@
 import fp from 'fastify-plugin';
 import type { FastifyInstance } from 'fastify';
+import type { PoolClient } from 'pg';
 import { initDb, getPrimaryPool, getReplicaPool, closeDb } from '@lowleads/db';
 
 declare module 'fastify' {
@@ -10,7 +11,7 @@ declare module 'fastify' {
       // Set RLS context for the current request's company
       withCompanyContext: <T>(
         companyId: string,
-        fn: (client: import('pg').PoolClient) => Promise<T>,
+        fn: (client: PoolClient) => Promise<T>,
       ) => Promise<T>;
     };
   }
@@ -30,7 +31,7 @@ export default fp(
 
     async function withCompanyContext<T>(
       companyId: string,
-      fn: (client: import('pg').PoolClient) => Promise<T>,
+      fn: (client: PoolClient) => Promise<T>,
     ): Promise<T> {
       const client = await primary.connect();
       try {

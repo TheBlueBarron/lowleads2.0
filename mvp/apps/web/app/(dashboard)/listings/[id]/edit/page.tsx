@@ -12,9 +12,21 @@ import { PageSpinner } from '@/components/ui/Spinner';
 import type { ServiceListing } from '@lowleads/shared-types';
 
 const SERVICE_CATEGORIES = [
-  'HVAC','Plumbing','Electrical','Roofing','Landscaping','Pest Control',
-  'Cleaning','Painting','Flooring','Windows & Doors','Garage Doors',
-  'Pool & Spa','Solar','Security','Other',
+  'HVAC',
+  'Plumbing',
+  'Electrical',
+  'Roofing',
+  'Landscaping',
+  'Pest Control',
+  'Cleaning',
+  'Painting',
+  'Flooring',
+  'Windows & Doors',
+  'Garage Doors',
+  'Pool & Spa',
+  'Solar',
+  'Security',
+  'Other',
 ];
 
 export default function EditListingPage() {
@@ -44,7 +56,9 @@ export default function EditListingPage() {
           serviceCategory: data.serviceCategory,
           description: data.description ?? '',
           rewardDollars: (data.rewardCents / 100).toFixed(2),
-          qualifiedBonusDollars: data.qualifiedBonusCents ? (data.qualifiedBonusCents / 100).toFixed(2) : '',
+          qualifiedBonusDollars: data.qualifiedBonusCents
+            ? (data.qualifiedBonusCents / 100).toFixed(2)
+            : '',
           maxConcurrentSales: String(data.maxConcurrentSales),
           autoReplenish: data.autoReplenish,
         });
@@ -72,9 +86,9 @@ export default function EditListingPage() {
         maxConcurrentSales: parseInt(form.maxConcurrentSales, 10),
         autoReplenish: form.autoReplenish,
       };
-      if (form.description) body['description'] = form.description;
+      if (form.description) body.description = form.description;
       if (form.qualifiedBonusDollars) {
-        body['qualifiedBonusCents'] = Math.round(parseFloat(form.qualifiedBonusDollars) * 100);
+        body.qualifiedBonusCents = Math.round(parseFloat(form.qualifiedBonusDollars) * 100);
       }
       await apiFetch<ServiceListing>(`/v1/listings/${id}`, { method: 'PATCH', body });
       router.push('/listings');
@@ -92,7 +106,12 @@ export default function EditListingPage() {
       <div className="flex items-center gap-3 mb-6">
         <Link href="/listings" className="text-gray-400 hover:text-gray-600">
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
           </svg>
         </Link>
         <h1 className="text-2xl font-bold text-gray-900">Edit Listing</h1>
@@ -113,7 +132,9 @@ export default function EditListingPage() {
             required
             disabled={listing?.status === 'archived'}
             value={form.serviceName}
-            onChange={(e) => set('serviceName', e.target.value)}
+            onChange={(e) => {
+              set('serviceName', e.target.value);
+            }}
           />
 
           <Select
@@ -121,11 +142,15 @@ export default function EditListingPage() {
             required
             disabled={listing?.status === 'archived'}
             value={form.serviceCategory}
-            onChange={(e) => set('serviceCategory', e.target.value)}
+            onChange={(e) => {
+              set('serviceCategory', e.target.value);
+            }}
           >
             <option value="">Select a category…</option>
             {SERVICE_CATEGORIES.map((c) => (
-              <option key={c} value={c}>{c}</option>
+              <option key={c} value={c}>
+                {c}
+              </option>
             ))}
           </Select>
 
@@ -133,7 +158,9 @@ export default function EditListingPage() {
             label="Description (optional)"
             disabled={listing?.status === 'archived'}
             value={form.description}
-            onChange={(e) => set('description', e.target.value)}
+            onChange={(e) => {
+              set('description', e.target.value);
+            }}
             rows={3}
           />
 
@@ -146,7 +173,9 @@ export default function EditListingPage() {
               required
               disabled={listing?.status === 'archived'}
               value={form.rewardDollars}
-              onChange={(e) => set('rewardDollars', e.target.value)}
+              onChange={(e) => {
+                set('rewardDollars', e.target.value);
+              }}
             />
             <Input
               label="Qualified bonus ($)"
@@ -155,7 +184,9 @@ export default function EditListingPage() {
               min="0"
               disabled={listing?.status === 'archived'}
               value={form.qualifiedBonusDollars}
-              onChange={(e) => set('qualifiedBonusDollars', e.target.value)}
+              onChange={(e) => {
+                set('qualifiedBonusDollars', e.target.value);
+              }}
             />
           </div>
 
@@ -167,7 +198,9 @@ export default function EditListingPage() {
             required
             disabled={listing?.status === 'archived'}
             value={form.maxConcurrentSales}
-            onChange={(e) => set('maxConcurrentSales', e.target.value)}
+            onChange={(e) => {
+              set('maxConcurrentSales', e.target.value);
+            }}
           />
 
           <label className="flex items-center gap-3 cursor-pointer">
@@ -175,7 +208,9 @@ export default function EditListingPage() {
               type="checkbox"
               disabled={listing?.status === 'archived'}
               checked={form.autoReplenish}
-              onChange={(e) => set('autoReplenish', e.target.checked)}
+              onChange={(e) => {
+                set('autoReplenish', e.target.checked);
+              }}
               className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
             />
             <span className="text-sm text-gray-700">Auto-replenish escrow when balance is low</span>
@@ -183,7 +218,9 @@ export default function EditListingPage() {
 
           <div className="flex justify-end gap-3 pt-2">
             <Link href="/listings">
-              <Button variant="secondary" type="button">Cancel</Button>
+              <Button variant="secondary" type="button">
+                Cancel
+              </Button>
             </Link>
             <Button type="submit" loading={saving} disabled={listing?.status === 'archived'}>
               Save Changes

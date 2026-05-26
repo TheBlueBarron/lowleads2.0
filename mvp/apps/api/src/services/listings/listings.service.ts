@@ -1,15 +1,7 @@
 import type { Pool, PoolClient } from 'pg';
 import type { FastifyBaseLogger } from 'fastify';
-import {
-  NotFoundError,
-  ConflictError,
-  ValidationError,
-  ForbiddenError,
-} from '../../lib/errors.js';
-import {
-  sendEmail,
-  buildLowEscrowEmail,
-} from '../../lib/email.js';
+import { NotFoundError, ConflictError, ValidationError } from '../../lib/errors.js';
+import { sendEmail, buildLowEscrowEmail } from '../../lib/email.js';
 import type { CreateListingBody, UpdateListingBody } from './listings.schema.js';
 
 export interface ListingServiceDeps {
@@ -123,16 +115,14 @@ export class ListingService {
     const listing = existing.rows[0];
     if (!listing) throw new NotFoundError('Listing');
     if (listing.status !== 'draft') {
-      throw new ValidationError(
-        'Only draft listings can be edited. Pause the listing first.',
-      );
+      throw new ValidationError('Only draft listings can be edited. Pause the listing first.');
     }
 
     const fields: string[] = [];
     const values: unknown[] = [];
     let idx = 1;
 
-    const textFields: Array<[keyof UpdateListingBody, string]> = [
+    const textFields: [keyof UpdateListingBody, string][] = [
       ['serviceName', 'service_name'],
       ['serviceCategory', 'service_category'],
       ['description', 'description'],
@@ -211,8 +201,7 @@ export class ListingService {
       const company = companyResult.rows[0];
       if (!company) throw new NotFoundError('Company');
 
-      const requiredCents =
-        listing.reward_cents * listing.max_concurrent_sales;
+      const requiredCents = listing.reward_cents * listing.max_concurrent_sales;
       const alreadyReserved = listing.escrow_reserved_cents;
       const additionalNeeded = requiredCents - alreadyReserved;
 
@@ -397,12 +386,7 @@ export class ListingService {
 
   // ─── Search (across all active listings) ────────────────────────────────────
 
-  async search(opts: {
-    query: string;
-    serviceArea?: string;
-    cursor?: string;
-    limit: number;
-  }) {
+  async search(opts: { query: string; serviceArea?: string; cursor?: string; limit: number }) {
     const limit = Math.min(opts.limit, 50);
     const params: unknown[] = [opts.query, limit + 1];
     const clauses: string[] = [
@@ -496,9 +480,7 @@ export class ListingService {
           fromEmail: this.deps.sesFromEmail,
           appUrl: this.deps.appUrl,
         }),
-      ).catch((err: unknown) =>
-        this.deps.log.error({ err }, 'Failed to send low escrow email'),
-      );
+      ).catch((err: unknown) => this.deps.log.error({ err }, 'Failed to send low escrow email'));
     }
   }
 

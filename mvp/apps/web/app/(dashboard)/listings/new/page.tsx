@@ -76,7 +76,12 @@ export default function NewListingPage() {
       <div className="flex items-center gap-3 mb-6">
         <Link href="/listings" className="text-gray-400 hover:text-gray-600">
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
           </svg>
         </Link>
         <h1 className="text-2xl font-bold text-gray-900">New Listing</h1>
@@ -90,7 +95,9 @@ export default function NewListingPage() {
             label="Service name"
             required
             value={form.serviceName}
-            onChange={(e) => set('serviceName', e.target.value)}
+            onChange={(e) => {
+              set('serviceName', e.target.value);
+            }}
             placeholder="HVAC Installation"
           />
 
@@ -98,18 +105,24 @@ export default function NewListingPage() {
             label="Service category"
             required
             value={form.serviceCategory}
-            onChange={(e) => set('serviceCategory', e.target.value)}
+            onChange={(e) => {
+              set('serviceCategory', e.target.value);
+            }}
           >
             <option value="">Select a category…</option>
             {SERVICE_CATEGORIES.map((c) => (
-              <option key={c} value={c}>{c}</option>
+              <option key={c} value={c}>
+                {c}
+              </option>
             ))}
           </Select>
 
           <Textarea
             label="Description (optional)"
             value={form.description}
-            onChange={(e) => set('description', e.target.value)}
+            onChange={(e) => {
+              set('description', e.target.value);
+            }}
             placeholder="Describe what kind of leads you're looking for…"
             rows={3}
           />
@@ -122,7 +135,9 @@ export default function NewListingPage() {
               min="1"
               required
               value={form.rewardDollars}
-              onChange={(e) => set('rewardDollars', e.target.value)}
+              onChange={(e) => {
+                set('rewardDollars', e.target.value);
+              }}
               placeholder="75.00"
               hint="Paid to submitter on successful sale"
             />
@@ -132,7 +147,9 @@ export default function NewListingPage() {
               step="0.01"
               min="0"
               value={form.qualifiedBonusDollars}
-              onChange={(e) => set('qualifiedBonusDollars', e.target.value)}
+              onChange={(e) => {
+                set('qualifiedBonusDollars', e.target.value);
+              }}
               placeholder="0.00"
               hint="Optional Pro/Enterprise bonus"
             />
@@ -145,7 +162,9 @@ export default function NewListingPage() {
             max="100"
             required
             value={form.maxConcurrentSales}
-            onChange={(e) => set('maxConcurrentSales', e.target.value)}
+            onChange={(e) => {
+              set('maxConcurrentSales', e.target.value);
+            }}
             hint="Maximum open leads at one time"
           />
 
@@ -153,19 +172,23 @@ export default function NewListingPage() {
             <input
               type="checkbox"
               checked={form.autoReplenish}
-              onChange={(e) => set('autoReplenish', e.target.checked)}
+              onChange={(e) => {
+                set('autoReplenish', e.target.checked);
+              }}
               className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
             />
-            <span className="text-sm text-gray-700">
-              Auto-replenish escrow when balance is low
-            </span>
+            <span className="text-sm text-gray-700">Auto-replenish escrow when balance is low</span>
           </label>
 
           <div className="flex justify-end gap-3 pt-2">
             <Link href="/listings">
-              <Button variant="secondary" type="button">Cancel</Button>
+              <Button variant="secondary" type="button">
+                Cancel
+              </Button>
             </Link>
-            <Button type="submit" loading={loading}>Create Listing</Button>
+            <Button type="submit" loading={loading}>
+              Create Listing
+            </Button>
           </div>
         </Card>
       </form>

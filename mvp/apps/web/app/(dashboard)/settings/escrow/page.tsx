@@ -62,8 +62,11 @@ export default function EscrowPage() {
         ]);
         setBalance(bal);
         setHistory(hist.transactions);
-      } catch { /* silently show empty */ }
-      finally { setLoading(false); }
+      } catch {
+        /* silently show empty */
+      } finally {
+        setLoading(false);
+      }
     })();
   }, []);
 
@@ -132,7 +135,9 @@ export default function EscrowPage() {
             min="10"
             placeholder="100.00"
             value={depositAmount}
-            onChange={(e) => setDepositAmount(e.target.value)}
+            onChange={(e) => {
+              setDepositAmount(e.target.value);
+            }}
             prefix="$"
             className="flex-1"
           />
@@ -166,7 +171,8 @@ export default function EscrowPage() {
                         meta.positive ? 'text-green-600' : 'text-gray-700'
                       }`}
                     >
-                      {meta.positive ? '+' : '-'}{formatCents(tx.amountCents)}
+                      {meta.positive ? '+' : '-'}
+                      {formatCents(tx.amountCents)}
                     </p>
                     <p className="text-xs text-gray-400">
                       Balance: {formatCents(tx.balanceAfterCents)}

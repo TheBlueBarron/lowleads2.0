@@ -4,6 +4,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import supertest from 'supertest';
+import jwt from 'jsonwebtoken';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../../app.js';
 import { getPrimaryPool } from '@lowleads/db';
@@ -32,46 +33,6 @@ const TEST_SECRETS = {
 
 let app: FastifyInstance;
 let request: ReturnType<typeof supertest>;
-
-// Helpers for test setup
-async function createTestCompanyAndToken(): Promise<{
-  companyId: string;
-  userId: string;
-  accessToken: string;
-}> {
-  const pool = getPrimaryPool();
-
-  const compResult = await pool.query<{ id: string }>(
-    `INSERT INTO companies (name, slug, subscription_tier, transaction_fee_bps, escrow_balance_cents)
-     VALUES ('Listing Test Co', 'listing-test-co', 'pro', 600, 100000)
-     RETURNING id`,
-  );
-  const companyId = compResult.rows[0]!.id;
-
-  const userResult = await pool.query<{ id: string }>(
-    `INSERT INTO users (email, password_hash, role, company_id, email_verified_at)
-     VALUES ('listing-owner@test.example.com', 'hash', 'company_owner', $1, NOW())
-     RETURNING id`,
-    [companyId],
-  );
-  const userId = userResult.rows[0]!.id;
-
-  // Get a JWT directly
-  const loginRes = await request.post('/v1/auth/login').send({
-    email: 'listing-owner@test.example.com',
-    password: 'anything', // bypassed by using pre-hashed password; use supertest to log in
-  });
-
-  // Direct token signing for tests — bypass full login flow
-  const jwt = require('jsonwebtoken');
-  const accessToken = jwt.sign(
-    { sub: userId, role: 'company_owner', companyId, mfaVerified: false },
-    TEST_SECRETS.jwtAccessSecret,
-    { algorithm: 'HS256', expiresIn: '15m' },
-  );
-
-  return { companyId, userId, accessToken };
-}
 
 beforeAll(async () => {
   app = await buildApp({
@@ -105,13 +66,10 @@ beforeEach(async () => {
 // ─── Helper ──────────────────────────────────────────────────────────────────
 
 function signToken(sub: string, companyId: string, role = 'company_owner'): string {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const jwt = require('jsonwebtoken') as typeof import('jsonwebtoken');
-  return jwt.sign(
-    { sub, role, companyId, mfaVerified: false },
-    TEST_SECRETS.jwtAccessSecret,
-    { algorithm: 'HS256', expiresIn: '15m' },
-  );
+  return jwt.sign({ sub, role, companyId, mfaVerified: false }, TEST_SECRETS.jwtAccessSecret, {
+    algorithm: 'HS256',
+    expiresIn: '15m',
+  });
 }
 
 async function seedCompany(slug: string, escrowCents = 50000) {
@@ -139,14 +97,11 @@ describe('POST /v1/listings', () => {
   it('creates a draft listing', async () => {
     const { token } = await seedCompany('create-lst');
 
-    const res = await request
-      .post('/v1/listings')
-      .set('Authorization', `Bearer ${token}`)
-      .send({
-        serviceName: 'HVAC Installation',
-        serviceCategory: 'hvac',
-        rewardCents: 5000,
-      });
+    const res = await request.post('/v1/listings').set('Authorization', `Bearer ${token}`).send({
+      serviceName: 'HVAC Installation',
+      serviceCategory: 'hvac',
+      rewardCents: 5000,
+    });
 
     expect(res.status).toBe(201);
     expect(res.body.status).toBe('draft');
@@ -188,9 +143,7 @@ describe('GET /v1/listings', () => {
       [companyId],
     );
 
-    const res = await request
-      .get('/v1/listings')
-      .set('Authorization', `Bearer ${token}`);
+    const res = await request.get('/v1/listings').set('Authorization', `Bearer ${token}`);
 
     expect(res.status).toBe(200);
     expect(res.body.data.length).toBe(1);
@@ -286,7 +239,7 @@ describe('POST /v1/listings/:id/pause', () => {
 
 describe('GET /v1/listings/search', () => {
   it('returns full-text matched listings', async () => {
-    const { companyId, userId, token } = await seedCompany('search-lst');
+    const { companyId, token } = await seedCompany('search-lst');
     const pool = getPrimaryPool();
 
     // Update service_area for the company

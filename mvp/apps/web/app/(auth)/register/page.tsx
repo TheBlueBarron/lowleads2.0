@@ -2,7 +2,6 @@
 
 import { useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { API_URL, ApiError } from '@/lib/api';
 import { slugify } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
@@ -10,7 +9,6 @@ import { Input } from '@/components/ui/Input';
 import { Alert } from '@/components/ui/Alert';
 
 export default function RegisterPage() {
-  const router = useRouter();
   const [form, setForm] = useState({
     email: '',
     password: '',
@@ -70,9 +68,7 @@ export default function RegisterPage() {
     <>
       <h2 className="text-xl font-semibold text-gray-900 mb-6">Create your account</h2>
 
-      {error && (
-        <Alert className="mb-4">{error}</Alert>
-      )}
+      {error && <Alert className="mb-4">{error}</Alert>}
 
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
         <Input
@@ -81,7 +77,9 @@ export default function RegisterPage() {
           autoComplete="email"
           required
           value={form.email}
-          onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+          onChange={(e) => {
+            setForm((f) => ({ ...f, email: e.target.value }));
+          }}
           placeholder="you@company.com"
         />
         <Input
@@ -91,7 +89,9 @@ export default function RegisterPage() {
           required
           minLength={12}
           value={form.password}
-          onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+          onChange={(e) => {
+            setForm((f) => ({ ...f, password: e.target.value }));
+          }}
           placeholder="••••••••••••"
           hint="Minimum 12 characters"
         />
@@ -100,7 +100,9 @@ export default function RegisterPage() {
           required
           minLength={2}
           value={form.companyName}
-          onChange={(e) => handleCompanyName(e.target.value)}
+          onChange={(e) => {
+            handleCompanyName(e.target.value);
+          }}
           placeholder="Phoenix HVAC Co."
         />
         <Input
@@ -108,7 +110,9 @@ export default function RegisterPage() {
           required
           pattern="[a-z0-9\-]+"
           value={form.companySlug}
-          onChange={(e) => setForm((f) => ({ ...f, companySlug: e.target.value }))}
+          onChange={(e) => {
+            setForm((f) => ({ ...f, companySlug: e.target.value }));
+          }}
           hint="Lowercase letters, numbers, hyphens only"
           placeholder="phoenix-hvac-co"
         />

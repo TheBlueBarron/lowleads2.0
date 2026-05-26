@@ -4,11 +4,7 @@
     "module": "Node16",
     "moduleResolution": "node16",
     "outDir": "./dist",
-    "rootDir": "./src",
-    "paths": {
-      "@lowleads/shared-types": ["../../packages/shared-types/src/index.ts"],
-      "@lowleads/db": ["../../packages/db/src/client.ts"]
-    }
+    "rootDir": "./src"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

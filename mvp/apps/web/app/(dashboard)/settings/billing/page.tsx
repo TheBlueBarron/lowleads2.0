@@ -38,8 +38,11 @@ export default function BillingPage() {
       try {
         const co = await apiFetch<Company>('/v1/companies/me');
         setCompany(co);
-      } catch { /* empty */ }
-      finally { setLoading(false); }
+      } catch {
+        /* empty */
+      } finally {
+        setLoading(false);
+      }
     })();
   }, []);
 
@@ -107,7 +110,7 @@ export default function BillingPage() {
             <Row label="Plan" value={currentTier.charAt(0).toUpperCase() + currentTier.slice(1)} />
             <Row
               label="Transaction fee"
-              value={`${TIER_LIMITS[currentTier].transactionFeeBps / 100}% per sale`}
+              value={`${String(TIER_LIMITS[currentTier].transactionFeeBps / 100)}% per sale`}
             />
             <Row
               label="Technician accounts"
@@ -117,10 +120,7 @@ export default function BillingPage() {
                   : String(TIER_LIMITS[currentTier].technicianAccounts)
               }
             />
-            <Row
-              label="Escrow balance"
-              value={formatCents(company.escrowBalanceCents)}
-            />
+            <Row label="Escrow balance" value={formatCents(company.escrowBalanceCents)} />
           </dl>
           {currentTier !== 'free' && (
             <div className="mt-4 pt-4 border-t border-gray-100">
@@ -149,10 +149,7 @@ export default function BillingPage() {
               (currentTier === 'pro' && tier === 'free');
 
             return (
-              <Card
-                key={tier}
-                className={highlight ? 'ring-2 ring-indigo-500' : ''}
-              >
+              <Card key={tier} className={highlight ? 'ring-2 ring-indigo-500' : ''}>
                 <div className="flex items-center justify-between mb-1">
                   <h3 className="font-semibold text-gray-900">{name}</h3>
                   {highlight && <Badge variant="indigo">Popular</Badge>}
@@ -164,14 +161,16 @@ export default function BillingPage() {
                     {limits.technicianAccounts === Infinity
                       ? 'Unlimited technicians'
                       : limits.technicianAccounts === 0
-                      ? 'No technician accounts'
-                      : `Up to ${limits.technicianAccounts} technicians`}
+                        ? 'No technician accounts'
+                        : `Up to ${String(limits.technicianAccounts)} technicians`}
                   </Feature>
                   {limits.bonusIssuance && <Feature>Qualified lead bonuses</Feature>}
                   {limits.multiLocation && <Feature>Multi-location support</Feature>}
                 </ul>
                 {isCurrent ? (
-                  <Badge variant="success" className="w-full justify-center">Current Plan</Badge>
+                  <Badge variant="success" className="w-full justify-center">
+                    Current Plan
+                  </Badge>
                 ) : tier === 'free' || isDowngrade ? (
                   <p className="text-xs text-gray-400 text-center">
                     {tier === 'free' ? 'Downgrade via Stripe portal' : 'Manage in Stripe'}

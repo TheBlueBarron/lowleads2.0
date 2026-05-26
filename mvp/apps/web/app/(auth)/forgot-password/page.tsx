@@ -21,7 +21,9 @@ export default function ForgotPasswordPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
-    } catch { /* always show success */ }
+    } catch {
+      /* always show success */
+    }
     setLoading(false);
     setSubmitted(true);
   }
@@ -51,7 +53,9 @@ export default function ForgotPasswordPage() {
             type="email"
             required
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+            }}
             placeholder="you@company.com"
           />
           <Button type="submit" className="w-full" loading={loading}>

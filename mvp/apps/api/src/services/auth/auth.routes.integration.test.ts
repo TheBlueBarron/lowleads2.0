@@ -147,10 +147,9 @@ describe('POST /v1/auth/login', () => {
     // Create and verify a test user directly in DB
     await request.post('/v1/auth/register').send(TEST_USER);
     const pool = getPrimaryPool();
-    await pool.query(
-      `UPDATE users SET email_verified_at = NOW() WHERE email = $1`,
-      [TEST_USER.email],
-    );
+    await pool.query(`UPDATE users SET email_verified_at = NOW() WHERE email = $1`, [
+      TEST_USER.email,
+    ]);
   });
 
   it('returns access token on valid credentials', async () => {
@@ -171,7 +170,7 @@ describe('POST /v1/auth/login', () => {
       password: TEST_USER.password,
     });
 
-    const cookie = (res.headers['set-cookie'] as string[])[0] ?? '';
+    const cookie = (res.headers['set-cookie'] as unknown as string[])[0] ?? '';
     expect(cookie).toContain('HttpOnly');
     expect(cookie).toContain('SameSite=Strict');
   });
@@ -223,20 +222,17 @@ describe('POST /v1/auth/refresh', () => {
       companyName: 'Refresh Test Co',
       companySlug: 'test-refresh-co',
     });
-    await getPrimaryPool().query(
-      `UPDATE users SET email_verified_at = NOW() WHERE email = $1`,
-      ['refresh@test.example.com'],
-    );
+    await getPrimaryPool().query(`UPDATE users SET email_verified_at = NOW() WHERE email = $1`, [
+      'refresh@test.example.com',
+    ]);
 
     const loginRes = await request.post('/v1/auth/login').send({
       email: 'refresh@test.example.com',
       password: 'RefreshTestPw123!',
     });
-    const refreshCookie = (loginRes.headers['set-cookie'] as string[])[0] ?? '';
+    const refreshCookie = (loginRes.headers['set-cookie'] as unknown as string[])[0] ?? '';
 
-    const refreshRes = await request
-      .post('/v1/auth/refresh')
-      .set('Cookie', refreshCookie);
+    const refreshRes = await request.post('/v1/auth/refresh').set('Cookie', refreshCookie);
 
     expect(refreshRes.status).toBe(200);
     expect(refreshRes.body.accessToken).toBeTruthy();
@@ -259,16 +255,15 @@ describe('POST /v1/auth/logout', () => {
       companyName: 'Logout Test Co',
       companySlug: 'test-logout-co',
     });
-    await getPrimaryPool().query(
-      `UPDATE users SET email_verified_at = NOW() WHERE email = $1`,
-      ['logout@test.example.com'],
-    );
+    await getPrimaryPool().query(`UPDATE users SET email_verified_at = NOW() WHERE email = $1`, [
+      'logout@test.example.com',
+    ]);
 
     const loginRes = await request.post('/v1/auth/login').send({
       email: 'logout@test.example.com',
       password: 'LogoutTestPw123!',
     });
-    const refreshCookie = (loginRes.headers['set-cookie'] as string[])[0] ?? '';
+    const refreshCookie = (loginRes.headers['set-cookie'] as unknown as string[])[0] ?? '';
     const { accessToken } = loginRes.body as { accessToken: string };
 
     const res = await request

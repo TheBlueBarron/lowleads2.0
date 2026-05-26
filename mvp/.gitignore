@@ -3,6 +3,10 @@ dist/
 .next/
 .turbo/
 coverage/
+
+# Build output generated next to source in some packages
+packages/*/src/*.js
+packages/*/src/*.d.ts
 *.log
 .env
 .env.local

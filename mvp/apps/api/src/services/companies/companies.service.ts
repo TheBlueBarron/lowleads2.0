@@ -101,10 +101,7 @@ export class CompanyService {
     };
   }
 
-  async getEscrowHistory(
-    companyId: string,
-    opts: { cursor?: string; limit: number },
-  ) {
+  async getEscrowHistory(companyId: string, opts: { cursor?: string; limit: number }) {
     const limit = Math.min(opts.limit, 100);
     const params: unknown[] = [companyId, limit + 1];
 

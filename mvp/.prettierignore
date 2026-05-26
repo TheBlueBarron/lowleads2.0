@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.next/
+.turbo/
+coverage/
+**/*.d.ts
+packages/*/src/*.js
+packages/*/src/*.d.ts
+pnpm-lock.yaml

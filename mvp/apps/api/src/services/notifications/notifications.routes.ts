@@ -1,9 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { NotificationService } from './notifications.service.js';
-import {
-  UpdateNotificationPrefsBody,
-  NotificationPrefsResponse,
-} from './notifications.schema.js';
+import { UpdateNotificationPrefsBody, NotificationPrefsResponse } from './notifications.schema.js';
 import { sendError, isAppError } from '../../lib/errors.js';
 
 export async function notificationRoutes(fastify: FastifyInstance): Promise<void> {
@@ -41,10 +38,7 @@ export async function notificationRoutes(fastify: FastifyInstance): Promise<void
         tags: ['notifications'],
       },
     },
-    async (
-      request: FastifyRequest<{ Body: UpdateNotificationPrefsBody }>,
-      reply: FastifyReply,
-    ) => {
+    async (request: FastifyRequest<{ Body: UpdateNotificationPrefsBody }>, reply: FastifyReply) => {
       try {
         const result = await service.updatePrefs(request.user.sub, request.body);
         return reply.status(200).send(result);

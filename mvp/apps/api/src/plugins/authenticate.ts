@@ -3,11 +3,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { AccessTokenPayload } from '@lowleads/shared-types';
 import { AuthenticationError, ForbiddenError, sendError } from '../lib/errors.js';
 
-declare module 'fastify' {
-  interface FastifyRequest {
-    user: AccessTokenPayload;
-  }
-}
+// FastifyRequest.user is augmented globally in src/types/fastify.d.ts
 
 export default fp(
   async (fastify: FastifyInstance) => {
@@ -21,7 +17,7 @@ export default fp(
         try {
           await request.jwtVerify<AccessTokenPayload>();
         } catch {
-          sendError(reply, new AuthenticationError());
+          return sendError(reply, new AuthenticationError());
         }
       },
     );
@@ -33,14 +29,13 @@ export default fp(
         try {
           await request.jwtVerify<AccessTokenPayload>();
           if (request.user.role !== 'company_owner') {
-            sendError(reply, new ForbiddenError('Company owner access required'));
+            return sendError(reply, new ForbiddenError('Company owner access required'));
           }
         } catch (err) {
           if (err instanceof Error && err.message.includes('owner')) {
-            sendError(reply, new ForbiddenError(err.message));
-          } else {
-            sendError(reply, new AuthenticationError());
+            return sendError(reply, new ForbiddenError(err.message));
           }
+          return sendError(reply, new AuthenticationError());
         }
       },
     );

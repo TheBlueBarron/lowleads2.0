@@ -29,10 +29,7 @@ export async function stripeRoutes(fastify: FastifyInstance): Promise<void> {
         tags: ['billing'],
       },
     },
-    async (
-      request: FastifyRequest<{ Body: CreateDepositSessionBody }>,
-      reply: FastifyReply,
-    ) => {
+    async (request: FastifyRequest<{ Body: CreateDepositSessionBody }>, reply: FastifyReply) => {
       try {
         const result = await service.createDepositSession(
           request.user.companyId,
@@ -105,7 +102,7 @@ export async function stripeRoutes(fastify: FastifyInstance): Promise<void> {
   // Stripe signature verification requires the raw request body as a Buffer.
   // We register a scoped content-type parser inside a child context so it
   // does not override the global JSON parser for all other routes.
-  fastify.register(async (webhookScope) => {
+  void fastify.register(async (webhookScope) => {
     webhookScope.addContentTypeParser(
       'application/json',
       { parseAs: 'buffer' },

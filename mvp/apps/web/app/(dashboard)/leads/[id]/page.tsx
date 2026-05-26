@@ -80,7 +80,9 @@ export default function LeadDetailPage() {
     return (
       <div className="p-6">
         <Alert>{error}</Alert>
-        <Link href="/leads" className="text-sm text-indigo-600 mt-4 inline-block">← Back to leads</Link>
+        <Link href="/leads" className="text-sm text-indigo-600 mt-4 inline-block">
+          ← Back to leads
+        </Link>
       </div>
     );
   }
@@ -93,7 +95,12 @@ export default function LeadDetailPage() {
       <div className="flex items-center gap-3 mb-6">
         <Link href="/leads" className="text-gray-400 hover:text-gray-600">
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
           </svg>
         </Link>
         <h1 className="text-2xl font-bold text-gray-900">Lead Details</h1>
@@ -118,9 +125,7 @@ export default function LeadDetailPage() {
                 )}
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold text-green-600">
-                  {formatCents(lead.rewardCents)}
-                </p>
+                <p className="text-2xl font-bold text-green-600">{formatCents(lead.rewardCents)}</p>
                 {lead.qualifiedBonusCents > 0 && (
                   <p className="text-xs text-gray-500">
                     +{formatCents(lead.qualifiedBonusCents)} qualified bonus

@@ -33,11 +33,7 @@ export async function leadRoutes(fastify: FastifyInstance): Promise<void> {
     },
     async (request: FastifyRequest<{ Body: SubmitLeadBody }>, reply: FastifyReply) => {
       try {
-        const result = await service.submit(
-          request.user.sub,
-          request.user.companyId,
-          request.body,
-        );
+        const result = await service.submit(request.user.sub, request.user.companyId, request.body);
         return reply.status(201).send(result);
       } catch (err) {
         if (isAppError(err)) return sendError(reply, err);
@@ -84,11 +80,7 @@ export async function leadRoutes(fastify: FastifyInstance): Promise<void> {
     },
     async (request: FastifyRequest<{ Params: LeadIdParam }>, reply: FastifyReply) => {
       try {
-        const result = await service.get(
-          request.user.companyId,
-          request.params.leadId,
-          true,
-        );
+        const result = await service.get(request.user.companyId, request.params.leadId, true);
         return reply.status(200).send(result);
       } catch (err) {
         if (isAppError(err)) return sendError(reply, err);

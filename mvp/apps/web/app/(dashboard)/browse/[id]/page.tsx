@@ -66,8 +66,8 @@ export default function BrowseListingDetailPage() {
         customerLastInitial: form.customerLastInitial.toUpperCase(),
         customerPhone: form.customerPhone,
       };
-      if (form.customerEmail) body['customerEmail'] = form.customerEmail;
-      if (form.notes) body['notes'] = form.notes;
+      if (form.customerEmail) body.customerEmail = form.customerEmail;
+      if (form.notes) body.notes = form.notes;
 
       const result = await apiFetch<LeadSummary>('/v1/leads', { method: 'POST', body });
       setSubmitted(result);
@@ -83,7 +83,9 @@ export default function BrowseListingDetailPage() {
     return (
       <div className="p-6">
         <Alert>{error}</Alert>
-        <Link href="/browse" className="text-sm text-indigo-600 mt-4 inline-block">← Back to browse</Link>
+        <Link href="/browse" className="text-sm text-indigo-600 mt-4 inline-block">
+          ← Back to browse
+        </Link>
       </div>
     );
   }
@@ -96,7 +98,14 @@ export default function BrowseListingDetailPage() {
           <strong>{formatCents(submitted.rewardCents)}</strong> when it results in a sale.
         </Alert>
         <div className="mt-6 flex gap-3">
-          <Button variant="secondary" onClick={() => router.push('/browse')}>Browse more</Button>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              router.push('/browse');
+            }}
+          >
+            Browse more
+          </Button>
           <Link href="/leads">
             <Button variant="ghost">View my leads</Button>
           </Link>
@@ -110,7 +119,12 @@ export default function BrowseListingDetailPage() {
       <div className="flex items-center gap-3 mb-6">
         <Link href="/browse" className="text-gray-400 hover:text-gray-600">
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
           </svg>
         </Link>
         <h1 className="text-2xl font-bold text-gray-900">Submit a Lead</h1>
@@ -135,7 +149,9 @@ export default function BrowseListingDetailPage() {
               </div>
             </div>
             <div className="text-right ml-4">
-              <p className="text-2xl font-bold text-green-600">{formatCents(listing.rewardCents)}</p>
+              <p className="text-2xl font-bold text-green-600">
+                {formatCents(listing.rewardCents)}
+              </p>
               <p className="text-xs text-gray-500">per sale</p>
               {listing.qualifiedBonusCents > 0 && (
                 <p className="text-xs text-green-500 mt-0.5">
@@ -160,7 +176,8 @@ export default function BrowseListingDetailPage() {
             <Card className="space-y-4">
               <h3 className="font-semibold text-gray-900 text-sm">Customer information</h3>
               <p className="text-xs text-gray-500 -mt-2">
-                Only first name, last initial, and phone are required. This information is encrypted and only visible to the receiving business.
+                Only first name, last initial, and phone are required. This information is encrypted
+                and only visible to the receiving business.
               </p>
 
               <div className="grid grid-cols-3 gap-3">
@@ -169,7 +186,9 @@ export default function BrowseListingDetailPage() {
                     label="First name"
                     required
                     value={form.customerFirstName}
-                    onChange={(e) => set('customerFirstName', e.target.value)}
+                    onChange={(e) => {
+                      set('customerFirstName', e.target.value);
+                    }}
                     placeholder="Jane"
                   />
                 </div>
@@ -179,7 +198,9 @@ export default function BrowseListingDetailPage() {
                   maxLength={1}
                   pattern="[A-Za-z]"
                   value={form.customerLastInitial}
-                  onChange={(e) => set('customerLastInitial', e.target.value)}
+                  onChange={(e) => {
+                    set('customerLastInitial', e.target.value);
+                  }}
                   placeholder="S"
                 />
               </div>
@@ -189,7 +210,9 @@ export default function BrowseListingDetailPage() {
                 type="tel"
                 required
                 value={form.customerPhone}
-                onChange={(e) => set('customerPhone', e.target.value)}
+                onChange={(e) => {
+                  set('customerPhone', e.target.value);
+                }}
                 placeholder="+1 (602) 555-0100"
               />
 
@@ -197,23 +220,31 @@ export default function BrowseListingDetailPage() {
                 label="Email (optional)"
                 type="email"
                 value={form.customerEmail}
-                onChange={(e) => set('customerEmail', e.target.value)}
+                onChange={(e) => {
+                  set('customerEmail', e.target.value);
+                }}
                 placeholder="jane@example.com"
               />
 
               <Textarea
                 label="Notes (optional)"
                 value={form.notes}
-                onChange={(e) => set('notes', e.target.value)}
+                onChange={(e) => {
+                  set('notes', e.target.value);
+                }}
                 placeholder="Brief notes about the customer's needs, location, urgency, etc."
                 rows={3}
               />
 
               <div className="flex justify-end gap-3 pt-2">
                 <Link href="/browse">
-                  <Button variant="secondary" type="button">Cancel</Button>
+                  <Button variant="secondary" type="button">
+                    Cancel
+                  </Button>
                 </Link>
-                <Button type="submit" loading={submitting}>Submit Lead</Button>
+                <Button type="submit" loading={submitting}>
+                  Submit Lead
+                </Button>
               </div>
             </Card>
           </form>

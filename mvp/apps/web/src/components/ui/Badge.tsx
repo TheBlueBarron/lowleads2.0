@@ -38,7 +38,7 @@ export function LeadStatusBadge({ status }: { status: LeadStatus }) {
     no_sale: { label: 'No Sale', variant: 'default' },
     sale: { label: 'Sale', variant: 'success' },
   };
-  const { label, variant } = map[status] ?? { label: status, variant: 'default' };
+  const { label, variant } = map[status];
   return <Badge variant={variant}>{label}</Badge>;
 }
 
@@ -49,7 +49,7 @@ export function ListingStatusBadge({ status }: { status: ListingStatus }) {
     paused: { label: 'Paused', variant: 'warning' },
     archived: { label: 'Archived', variant: 'error' },
   };
-  const { label, variant } = map[status] ?? { label: status, variant: 'default' };
+  const { label, variant } = map[status];
   return <Badge variant={variant}>{label}</Badge>;
 }
 
@@ -59,6 +59,6 @@ export function TierBadge({ tier }: { tier: SubscriptionTier }) {
     pro: { label: 'Pro', variant: 'indigo' },
     enterprise: { label: 'Enterprise', variant: 'info' },
   };
-  const { label, variant } = map[tier] ?? { label: tier, variant: 'default' };
+  const { label, variant } = map[tier];
   return <Badge variant={variant}>{label}</Badge>;
 }

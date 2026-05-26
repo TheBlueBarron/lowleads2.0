@@ -1,4 +1,3 @@
-import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { authenticator } from 'otplib';
 import * as QRCode from 'qrcode';
@@ -33,7 +32,6 @@ import {
   NotFoundError,
   TooManyRequestsError,
   ValidationError,
-  AppError,
 } from '../../lib/errors.js';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -86,6 +84,7 @@ interface UserRow {
   role: UserRole;
   company_id: string;
   last_login_at: Date | null;
+  deleted_at: Date | null;
   login_attempts: number;
   locked_until: Date | null;
 }
@@ -213,12 +212,8 @@ export class AuthService {
 
     // Check account lockout
     if (user.locked_until && user.locked_until > new Date()) {
-      const secondsRemaining = Math.ceil(
-        (user.locked_until.getTime() - Date.now()) / 1000,
-      );
-      throw new TooManyRequestsError(
-        `Account locked. Try again in ${secondsRemaining} seconds.`,
-      );
+      const secondsRemaining = Math.ceil((user.locked_until.getTime() - Date.now()) / 1000);
+      throw new TooManyRequestsError(`Account locked. Try again in ${secondsRemaining} seconds.`);
     }
 
     // Verify password
@@ -318,7 +313,9 @@ export class AuthService {
 
   // ─── Refresh ───────────────────────────────────────────────────────────────
 
-  async refresh(fullToken: string): Promise<{ accessToken: string; refreshToken: string; expiresIn: number }> {
+  async refresh(
+    fullToken: string,
+  ): Promise<{ accessToken: string; refreshToken: string; expiresIn: number }> {
     let tokenFamily: string;
     let tokenValue: string;
     try {
@@ -349,7 +346,9 @@ export class AuthService {
     }
 
     // Fetch current user role (may have changed since token was issued)
-    const userResult = await this.deps.db.query<Pick<UserRow, 'id' | 'role' | 'company_id' | 'mfa_enabled' | 'deleted_at'>>(
+    const userResult = await this.deps.db.query<
+      Pick<UserRow, 'id' | 'role' | 'company_id' | 'mfa_enabled' | 'deleted_at'>
+    >(
       `SELECT id, role, company_id, mfa_enabled
        FROM users WHERE id = $1 AND deleted_at IS NULL`,
       [parsed.userId],
@@ -370,7 +369,11 @@ export class AuthService {
       mfaVerified: user.mfa_enabled,
     });
 
-    const { tokenFamily: newFamily, tokenValue: newValue, fullToken: newFullToken } = generateRefreshToken();
+    const {
+      tokenFamily: newFamily,
+      tokenValue: newValue,
+      fullToken: newFullToken,
+    } = generateRefreshToken();
     const newHash = await hashSecret(newValue);
     await this.deps.redis.setex(
       REDIS_KEYS.refreshToken(newFamily),
@@ -428,10 +431,7 @@ export class AuthService {
       return { message: 'Email already verified' };
     }
 
-    await this.deps.db.query(
-      'UPDATE users SET email_verified_at = NOW() WHERE id = $1',
-      [user.id],
-    );
+    await this.deps.db.query('UPDATE users SET email_verified_at = NOW() WHERE id = $1', [user.id]);
 
     // Mark JTI as consumed
     await this.deps.redis.setex(jtiKey, EMAIL_TOKEN_TTL_SECONDS, '1');
@@ -456,10 +456,10 @@ export class AuthService {
     const encryptedSecret = await encryptField(secret, this.deps.kmsKeyId);
 
     // Store secret in DB (mfa_enabled stays FALSE until verified)
-    await this.deps.db.query(
-      'UPDATE users SET mfa_secret = $1 WHERE id = $2',
-      [encryptedSecret, userId],
-    );
+    await this.deps.db.query('UPDATE users SET mfa_secret = $1 WHERE id = $2', [
+      encryptedSecret,
+      userId,
+    ]);
 
     const otpAuthUri = authenticator.keyuri(user.email, 'Lowleads', secret);
     const qrCodeUri = await QRCode.toDataURL(otpAuthUri);
@@ -469,10 +469,7 @@ export class AuthService {
 
   // ─── MFA Verify ────────────────────────────────────────────────────────────
 
-  async verifyMfaSetup(
-    userId: string,
-    token: string,
-  ): Promise<{ backupCodes: string[] }> {
+  async verifyMfaSetup(userId: string, token: string): Promise<{ backupCodes: string[] }> {
     const userResult = await this.deps.db.query<Pick<UserRow, 'id' | 'mfa_secret' | 'mfa_enabled'>>(
       'SELECT id, mfa_secret, mfa_enabled FROM users WHERE id = $1 AND deleted_at IS NULL',
       [userId],
@@ -619,11 +616,9 @@ export class AuthService {
 
   private signEmailVerificationToken(userId: string, email: string): string {
     const jti = generateJti();
-    return jwt.sign(
-      { sub: userId, email, jti, type: 'email_verify' },
-      this.deps.jwtEmailSecret,
-      { expiresIn: EMAIL_TOKEN_TTL_SECONDS },
-    );
+    return jwt.sign({ sub: userId, email, jti, type: 'email_verify' }, this.deps.jwtEmailSecret, {
+      expiresIn: EMAIL_TOKEN_TTL_SECONDS,
+    });
   }
 
   private async checkIpRateLimit(ip: string): Promise<void> {
@@ -674,10 +669,10 @@ export class AuthService {
         client.release();
       }
     } else {
-      await this.deps.db.query(
-        'UPDATE users SET login_attempts = $1 WHERE id = $2',
-        [newAttempts, userId],
-      );
+      await this.deps.db.query('UPDATE users SET login_attempts = $1 WHERE id = $2', [
+        newAttempts,
+        userId,
+      ]);
     }
   }
 
@@ -696,10 +691,10 @@ export class AuthService {
         // Consume the used backup code (replace with empty string hash)
         const updatedCodes = [...user.mfa_backup_codes];
         updatedCodes[codeIndex] = '';
-        await this.deps.db.query(
-          'UPDATE users SET mfa_backup_codes = $1 WHERE id = $2',
-          [JSON.stringify(updatedCodes), user.id],
-        );
+        await this.deps.db.query('UPDATE users SET mfa_backup_codes = $1 WHERE id = $2', [
+          JSON.stringify(updatedCodes),
+          user.id,
+        ]);
         return true;
       }
     }

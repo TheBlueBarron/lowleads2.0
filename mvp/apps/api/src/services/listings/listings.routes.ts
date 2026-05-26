@@ -80,10 +80,7 @@ export async function listingRoutes(fastify: FastifyInstance): Promise<void> {
         tags: ['listings'],
       },
     },
-    async (
-      request: FastifyRequest<{ Querystring: SearchListingsQuery }>,
-      reply: FastifyReply,
-    ) => {
+    async (request: FastifyRequest<{ Querystring: SearchListingsQuery }>, reply: FastifyReply) => {
       try {
         const result = await service.search({
           query: request.query.q,

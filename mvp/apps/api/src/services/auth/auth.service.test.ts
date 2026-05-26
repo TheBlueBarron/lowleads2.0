@@ -1,10 +1,9 @@
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { describe, it, expect, jest } from '@jest/globals';
 import type { Pool, PoolClient, QueryResult } from 'pg';
 import type Redis from 'ioredis';
 import type { FastifyBaseLogger } from 'fastify';
 import { AuthService } from './auth.service.js';
 import * as cryptoLib from '../../lib/crypto.js';
-import * as emailLib from '../../lib/email.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -207,9 +206,13 @@ describe('AuthService', () => {
 
     it('rejects when slug is already taken', async () => {
       const pool = {
-        query: jest.fn<() => Promise<QueryResult>>()
+        query: jest
+          .fn<() => Promise<QueryResult>>()
           .mockResolvedValueOnce({ rows: [], rowCount: 0 } as unknown as QueryResult) // email check
-          .mockResolvedValueOnce({ rows: [{ id: 'existing' }], rowCount: 1 } as unknown as QueryResult), // slug check
+          .mockResolvedValueOnce({
+            rows: [{ id: 'existing' }],
+            rowCount: 1,
+          } as unknown as QueryResult), // slug check
         connect: jest.fn<() => Promise<PoolClient>>().mockResolvedValue(makePoolClient()),
       } as unknown as Pool;
 
@@ -229,7 +232,7 @@ describe('AuthService', () => {
     it('throws AuthenticationError for non-existent user', async () => {
       const pool = makePool({ rows: [] });
       const redis = makeRedis();
-      (redis.incr as jest.Mock).mockResolvedValue(1);
+      (redis.incr as jest.MockedFunction<typeof redis.incr>).mockResolvedValue(1);
 
       const service = makeService(pool, redis);
       await expect(
@@ -245,23 +248,25 @@ describe('AuthService', () => {
     it('throws TooManyRequestsError when account is locked', async () => {
       const lockedUntil = new Date(Date.now() + 60_000);
       const pool = makePool({
-        rows: [{
-          id: 'user-1',
-          email: 'locked@example.com',
-          email_verified_at: new Date(),
-          password_hash: '$argon2id$v=19$m=65536,t=3,p=4$fake',
-          mfa_secret: null,
-          mfa_backup_codes: null,
-          mfa_enabled: false,
-          role: 'company_owner',
-          company_id: 'company-1',
-          last_login_at: null,
-          login_attempts: 5,
-          locked_until: lockedUntil,
-        }],
+        rows: [
+          {
+            id: 'user-1',
+            email: 'locked@example.com',
+            email_verified_at: new Date(),
+            password_hash: '$argon2id$v=19$m=65536,t=3,p=4$fake',
+            mfa_secret: null,
+            mfa_backup_codes: null,
+            mfa_enabled: false,
+            role: 'company_owner',
+            company_id: 'company-1',
+            last_login_at: null,
+            login_attempts: 5,
+            locked_until: lockedUntil,
+          },
+        ],
       });
       const redis = makeRedis();
-      (redis.incr as jest.Mock).mockResolvedValue(1);
+      (redis.incr as jest.MockedFunction<typeof redis.incr>).mockResolvedValue(1);
 
       const service = makeService(pool, redis);
       await expect(
@@ -276,7 +281,7 @@ describe('AuthService', () => {
 
     it('throws TooManyRequestsError when IP is blocked', async () => {
       const redis = makeRedis();
-      (redis.get as jest.Mock).mockResolvedValue('1'); // IP blocked
+      (redis.get as jest.MockedFunction<typeof redis.get>).mockResolvedValue('1'); // IP blocked
 
       const service = makeService(undefined, redis);
       await expect(
@@ -291,23 +296,25 @@ describe('AuthService', () => {
 
     it('requires MFA token when MFA is enabled', async () => {
       const pool = makePool({
-        rows: [{
-          id: 'user-1',
-          email: 'mfa@example.com',
-          email_verified_at: new Date(),
-          password_hash: await cryptoLib.hashPassword('GoodPassword123!'),
-          mfa_secret: 'encrypted-secret',
-          mfa_backup_codes: null,
-          mfa_enabled: true,
-          role: 'company_owner',
-          company_id: 'company-1',
-          last_login_at: null,
-          login_attempts: 0,
-          locked_until: null,
-        }],
+        rows: [
+          {
+            id: 'user-1',
+            email: 'mfa@example.com',
+            email_verified_at: new Date(),
+            password_hash: await cryptoLib.hashPassword('GoodPassword123!'),
+            mfa_secret: 'encrypted-secret',
+            mfa_backup_codes: null,
+            mfa_enabled: true,
+            role: 'company_owner',
+            company_id: 'company-1',
+            last_login_at: null,
+            login_attempts: 0,
+            locked_until: null,
+          },
+        ],
       });
       const redis = makeRedis();
-      (redis.incr as jest.Mock).mockResolvedValue(1);
+      (redis.incr as jest.MockedFunction<typeof redis.incr>).mockResolvedValue(1);
 
       const service = makeService(pool, redis);
       await expect(
@@ -325,7 +332,7 @@ describe('AuthService', () => {
   describe('refresh', () => {
     it('throws on missing token family in Redis', async () => {
       const redis = makeRedis();
-      (redis.get as jest.Mock).mockResolvedValue(null);
+      (redis.get as jest.MockedFunction<typeof redis.get>).mockResolvedValue(null);
 
       const service = makeService(undefined, redis);
       const { fullToken } = cryptoLib.generateRefreshToken();

@@ -11,10 +11,6 @@ import { Badge, TierBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import type { Company, EscrowTransaction } from '@lowleads/shared-types';
 
-interface EscrowBalanceResponse {
-  balanceCents: number;
-}
-
 interface EscrowHistoryResponse {
   transactions: EscrowTransaction[];
   cursor: string | null;
@@ -80,18 +76,16 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            {company?.name ?? 'Dashboard'}
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900">{company?.name ?? 'Dashboard'}</h1>
           <div className="flex items-center gap-2 mt-1">
             {company && <TierBadge tier={company.subscriptionTier} />}
-            {company?.verifiedAt && (
-              <Badge variant="success">Verified</Badge>
-            )}
+            {company?.verifiedAt && <Badge variant="success">Verified</Badge>}
           </div>
         </div>
         <Link href="/settings/escrow">
-          <Button variant="secondary" size="sm">Add Funds</Button>
+          <Button variant="secondary" size="sm">
+            Add Funds
+          </Button>
         </Link>
       </div>
 
@@ -102,8 +96,16 @@ export default function DashboardPage() {
           value={company ? formatCents(company.escrowBalanceCents) : '—'}
           sub="Available for lead activity"
           icon={
-            <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+            <svg
+              className="w-5 h-5 text-indigo-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
                 d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
@@ -115,8 +117,16 @@ export default function DashboardPage() {
           sub="Awaiting your review"
           iconBg="bg-yellow-50"
           icon={
-            <svg className="w-5 h-5 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+            <svg
+              className="w-5 h-5 text-yellow-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
                 d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0H4m4 0l4-4 4 4"
               />
             </svg>
@@ -128,8 +138,16 @@ export default function DashboardPage() {
           sub="Currently accepting leads"
           iconBg="bg-green-50"
           icon={
-            <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+            <svg
+              className="w-5 h-5 text-green-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
                 d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 4h6m-6 4h4"
               />
             </svg>
@@ -150,12 +168,18 @@ export default function DashboardPage() {
         ) : (
           <ul className="divide-y divide-gray-50">
             {recentTx.map((tx) => {
-              const t = txTypeLabel[tx.type] ?? { label: tx.type, sign: '', color: 'text-gray-600' };
+              const t = txTypeLabel[tx.type] ?? {
+                label: tx.type,
+                sign: '',
+                color: 'text-gray-600',
+              };
               const isCredit = ['+'].includes(t.sign);
               return (
                 <li key={tx.id} className="flex items-center justify-between px-6 py-3">
                   <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${isCredit ? 'bg-green-400' : 'bg-gray-300'}`} />
+                    <div
+                      className={`w-2 h-2 rounded-full ${isCredit ? 'bg-green-400' : 'bg-gray-300'}`}
+                    />
                     <div>
                       <p className="text-sm font-medium text-gray-800">{t.label}</p>
                       <p className="text-xs text-gray-400">{formatDateTime(tx.createdAt)}</p>
@@ -163,7 +187,8 @@ export default function DashboardPage() {
                   </div>
                   <div className="text-right">
                     <p className={`text-sm font-medium ${t.color}`}>
-                      {t.sign}{formatCents(tx.amountCents)}
+                      {t.sign}
+                      {formatCents(tx.amountCents)}
                     </p>
                     <p className="text-xs text-gray-400">
                       Bal: {formatCents(tx.balanceAfterCents)}

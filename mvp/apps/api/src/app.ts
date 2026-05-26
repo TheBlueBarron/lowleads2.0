@@ -55,9 +55,7 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
                   method: request.method,
                   url: request.url,
                   // Hash user IP for logging — no raw PII in logs
-                  remoteAddress: request.ip
-                    ? `[${request.ip.length}chars]`
-                    : 'unknown',
+                  remoteAddress: request.ip ? `[${request.ip.length}chars]` : 'unknown',
                 };
               },
             },

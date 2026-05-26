@@ -75,7 +75,9 @@ export default function SettingsPage() {
     }
   }
 
-  async function handleNotifToggle(field: keyof Pick<NotificationPrefs, 'emailNewLead' | 'emailLeadResolved' | 'emailLowEscrow'>) {
+  async function handleNotifToggle(
+    field: keyof Pick<NotificationPrefs, 'emailNewLead' | 'emailLeadResolved' | 'emailLowEscrow'>,
+  ) {
     if (!prefs) return;
     const next = { ...prefs, [field]: !prefs[field] };
     setPrefs(next);
@@ -129,7 +131,9 @@ export default function SettingsPage() {
         </div>
 
         {profileSuccess && (
-          <Alert variant="success" className="mb-4">Profile saved successfully.</Alert>
+          <Alert variant="success" className="mb-4">
+            Profile saved successfully.
+          </Alert>
         )}
         {profileError && <Alert className="mb-4">{profileError}</Alert>}
 
@@ -138,24 +142,35 @@ export default function SettingsPage() {
             label="Company name"
             required
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              setName(e.target.value);
+            }}
           />
           <Input
             label="Service areas"
             value={serviceAreaInput}
-            onChange={(e) => setServiceAreaInput(e.target.value)}
+            onChange={(e) => {
+              setServiceAreaInput(e.target.value);
+            }}
             hint="Comma-separated list: Phoenix, Scottsdale, Tempe"
             placeholder="Phoenix, Scottsdale, Tempe"
           />
           {company && (
             <div className="text-xs text-gray-500 space-y-1 pt-1 border-t border-gray-100">
-              <p><span className="font-medium">Slug:</span> {company.slug}</p>
-              <p><span className="font-medium">Transaction fee:</span> {company.transactionFeeBps / 100}%</p>
+              <p>
+                <span className="font-medium">Slug:</span> {company.slug}
+              </p>
+              <p>
+                <span className="font-medium">Transaction fee:</span>{' '}
+                {company.transactionFeeBps / 100}%
+              </p>
               {company.verifiedAt && <p className="text-green-600">✓ Company verified</p>}
             </div>
           )}
           <div className="flex justify-end">
-            <Button type="submit" loading={savingProfile} size="sm">Save Profile</Button>
+            <Button type="submit" loading={savingProfile} size="sm">
+              Save Profile
+            </Button>
           </div>
         </form>
       </Card>
@@ -166,7 +181,9 @@ export default function SettingsPage() {
           <h2 className="text-sm font-semibold text-gray-900 mb-4">Email Notifications</h2>
 
           {notifSuccess && (
-            <Alert variant="success" className="mb-4">Preferences saved.</Alert>
+            <Alert variant="success" className="mb-4">
+              Preferences saved.
+            </Alert>
           )}
           {notifError && <Alert className="mb-4">{notifError}</Alert>}
 
@@ -196,15 +213,17 @@ export default function SettingsPage() {
                 step="1"
                 min="0"
                 value={(prefs.lowEscrowThresholdCents / 100).toFixed(0)}
-                onChange={(e) =>
+                onChange={(e) => {
                   setPrefs((p) =>
                     p ? { ...p, lowEscrowThresholdCents: parseInt(e.target.value, 10) * 100 } : p,
-                  )
-                }
+                  );
+                }}
               />
             )}
             <div className="flex justify-end">
-              <Button type="submit" loading={savingNotifs} size="sm">Save Notifications</Button>
+              <Button type="submit" loading={savingNotifs} size="sm">
+                Save Notifications
+              </Button>
             </div>
           </form>
         </Card>

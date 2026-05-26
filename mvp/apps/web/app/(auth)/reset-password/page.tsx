@@ -41,9 +41,7 @@ export default function ResetPasswordPage() {
   }
 
   if (!token) {
-    return (
-      <Alert>Invalid or missing reset token. Please request a new password reset link.</Alert>
-    );
+    return <Alert>Invalid or missing reset token. Please request a new password reset link.</Alert>;
   }
 
   return (
@@ -73,7 +71,9 @@ export default function ResetPasswordPage() {
               required
               minLength={12}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+              }}
               placeholder="••••••••••••"
               hint="Minimum 12 characters"
             />

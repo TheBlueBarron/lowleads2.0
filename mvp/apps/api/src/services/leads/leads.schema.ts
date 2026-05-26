@@ -28,9 +28,7 @@ export const UpdateLeadStatusBody = Type.Object({
 export type UpdateLeadStatusBody = Static<typeof UpdateLeadStatusBody>;
 
 export const LeadsQuery = Type.Object({
-  role: Type.Optional(
-    Type.Union([Type.Literal('receiver'), Type.Literal('submitter')]),
-  ),
+  role: Type.Optional(Type.Union([Type.Literal('receiver'), Type.Literal('submitter')])),
   status: Type.Optional(
     Type.Union([
       Type.Literal('pending'),

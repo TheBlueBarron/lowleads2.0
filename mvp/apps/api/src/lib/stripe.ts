@@ -20,5 +20,6 @@ export function _resetStripeClient(): void {
 // Stripe product IDs for subscription tiers — set via env/config
 export const STRIPE_PRICE_IDS = {
   pro_monthly: process.env['STRIPE_PRICE_PRO_MONTHLY'] ?? 'price_placeholder_pro',
-  enterprise_monthly: process.env['STRIPE_PRICE_ENTERPRISE_MONTHLY'] ?? 'price_placeholder_enterprise',
+  enterprise_monthly:
+    process.env['STRIPE_PRICE_ENTERPRISE_MONTHLY'] ?? 'price_placeholder_enterprise',
 } as const;

@@ -73,7 +73,12 @@ export default function ListingsPage() {
         <Link href="/listings/new">
           <Button size="sm">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
             </svg>
             New Listing
           </Button>
@@ -87,7 +92,9 @@ export default function ListingsPage() {
         {TABS.map((t) => (
           <button
             key={t.value}
-            onClick={() => setTab(t.value)}
+            onClick={() => {
+              setTab(t.value);
+            }}
             className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
               tab === t.value
                 ? 'border-indigo-600 text-indigo-600'
@@ -142,7 +149,7 @@ export default function ListingsPage() {
                     <p className="text-xs text-gray-500 mt-0.5">{listing.serviceCategory}</p>
                   </td>
                   <td className="px-4 py-4">
-                    <ListingStatusBadge status={listing.status as ListingStatus} />
+                    <ListingStatusBadge status={listing.status} />
                   </td>
                   <td className="px-4 py-4 text-gray-700">
                     {formatCents(listing.rewardCents)}
@@ -161,7 +168,9 @@ export default function ListingsPage() {
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-2 justify-end">
                       <Link href={`/listings/${listing.id}/edit`}>
-                        <Button variant="ghost" size="sm">Edit</Button>
+                        <Button variant="ghost" size="sm">
+                          Edit
+                        </Button>
                       </Link>
                       {listing.status === 'draft' && (
                         <Button

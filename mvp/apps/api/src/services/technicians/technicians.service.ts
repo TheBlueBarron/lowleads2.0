@@ -29,10 +29,7 @@ export class TechnicianService {
     // Verify tier allows technician accounts
     const companyResult = await this.deps.db.query<{
       subscription_tier: string;
-    }>(
-      'SELECT subscription_tier FROM companies WHERE id = $1 AND deleted_at IS NULL',
-      [companyId],
-    );
+    }>('SELECT subscription_tier FROM companies WHERE id = $1 AND deleted_at IS NULL', [companyId]);
     const company = companyResult.rows[0];
     if (!company) throw new NotFoundError('Company');
 

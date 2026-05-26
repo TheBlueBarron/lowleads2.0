@@ -28,10 +28,9 @@ export class StripeService {
     const result = await this.deps.db.query<{
       stripe_customer_id: string | null;
       name: string;
-    }>(
-      'SELECT stripe_customer_id, name FROM companies WHERE id = $1 AND deleted_at IS NULL',
-      [companyId],
-    );
+    }>('SELECT stripe_customer_id, name FROM companies WHERE id = $1 AND deleted_at IS NULL', [
+      companyId,
+    ]);
     const company = result.rows[0];
     if (!company) throw new NotFoundError('Company');
 
@@ -52,21 +51,17 @@ export class StripeService {
       metadata: { companyId },
     });
 
-    await this.deps.db.query(
-      'UPDATE companies SET stripe_customer_id = $1 WHERE id = $2',
-      [customer.id, companyId],
-    );
+    await this.deps.db.query('UPDATE companies SET stripe_customer_id = $1 WHERE id = $2', [
+      customer.id,
+      companyId,
+    ]);
 
     return customer.id;
   }
 
   // ─── Escrow deposit checkout session ───────────────────────────────────────
 
-  async createDepositSession(
-    companyId: string,
-    amountCents: number,
-    returnUrl: string,
-  ) {
+  async createDepositSession(companyId: string, amountCents: number, returnUrl: string) {
     if (amountCents < 1000) {
       throw new ValidationError('Minimum deposit is $10.00');
     }
@@ -203,7 +198,10 @@ export class StripeService {
         `UPDATE stripe_webhook_events SET error = $1 WHERE stripe_event_id = $2`,
         [message, event.id],
       );
-      this.deps.log.error({ err, eventId: event.id, eventType: event.type }, 'Webhook handler failed');
+      this.deps.log.error(
+        { err, eventId: event.id, eventType: event.type },
+        'Webhook handler failed',
+      );
       throw err;
     }
   }
@@ -240,9 +238,7 @@ export class StripeService {
 
   private async handleSubscriptionUpdated(subscription: Stripe.Subscription): Promise<void> {
     const customerId =
-      typeof subscription.customer === 'string'
-        ? subscription.customer
-        : subscription.customer.id;
+      typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
 
     const tier = this.tierFromProductId(subscription);
     if (!tier) return;
@@ -257,9 +253,7 @@ export class StripeService {
 
   private async handleSubscriptionDeleted(subscription: Stripe.Subscription): Promise<void> {
     const customerId =
-      typeof subscription.customer === 'string'
-        ? subscription.customer
-        : subscription.customer.id;
+      typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
 
     await this.deps.db.query(
       `UPDATE companies

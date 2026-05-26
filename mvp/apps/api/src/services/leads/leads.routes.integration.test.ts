@@ -4,6 +4,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import supertest from 'supertest';
+import jwt from 'jsonwebtoken';
 import type { FastifyInstance } from 'fastify';
 import { buildApp } from '../../app.js';
 import { getPrimaryPool } from '@lowleads/db';
@@ -38,13 +39,10 @@ function signToken(
   companyId: string,
   role: 'company_owner' | 'technician' = 'company_owner',
 ): string {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const jwt = require('jsonwebtoken') as typeof import('jsonwebtoken');
-  return jwt.sign(
-    { sub, role, companyId, mfaVerified: false },
-    TEST_SECRETS.jwtAccessSecret,
-    { algorithm: 'HS256', expiresIn: '15m' },
-  );
+  return jwt.sign({ sub, role, companyId, mfaVerified: false }, TEST_SECRETS.jwtAccessSecret, {
+    algorithm: 'HS256',
+    expiresIn: '15m',
+  });
 }
 
 async function seedCompany(slug: string, escrow = 100000) {
@@ -174,7 +172,7 @@ describe('POST /v1/leads', () => {
     const receiver = await seedCompany('lead-max-recv');
     const pool = getPrimaryPool();
     const subm1 = await seedCompany('lead-max-s1');
-    const subm2 = await seedCompany('lead-max-s2');
+    await seedCompany('lead-max-s2');
 
     // Listing with max_concurrent_sales = 1 and active_lead_count already at 1
     const listRes = await pool.query<{ id: string }>(
@@ -185,15 +183,12 @@ describe('POST /v1/leads', () => {
       [receiver.companyId],
     );
 
-    const res = await request
-      .post('/v1/leads')
-      .set('Authorization', `Bearer ${subm1.token}`)
-      .send({
-        listingId: listRes.rows[0]!.id,
-        customerFirstName: 'Dave',
-        customerLastInitial: 'E',
-        customerPhone: '5552223333',
-      });
+    const res = await request.post('/v1/leads').set('Authorization', `Bearer ${subm1.token}`).send({
+      listingId: listRes.rows[0]!.id,
+      customerFirstName: 'Dave',
+      customerLastInitial: 'E',
+      customerPhone: '5552223333',
+    });
 
     expect(res.status).toBe(409);
   });

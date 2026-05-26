@@ -84,10 +84,7 @@ export async function companyRoutes(fastify: FastifyInstance): Promise<void> {
         tags: ['companies'],
       },
     },
-    async (
-      request: FastifyRequest<{ Querystring: EscrowHistoryQuery }>,
-      reply: FastifyReply,
-    ) => {
+    async (request: FastifyRequest<{ Querystring: EscrowHistoryQuery }>, reply: FastifyReply) => {
       try {
         const result = await service.getEscrowHistory(request.user.companyId, {
           cursor: request.query.cursor,

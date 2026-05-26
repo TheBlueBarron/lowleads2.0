@@ -64,10 +64,7 @@ export async function encryptField(plaintext: string, kmsKeyId: string): Promise
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv('aes-256-gcm', Buffer.from(dataKey), iv);
 
-  const ciphertext = Buffer.concat([
-    cipher.update(plaintext, 'utf8'),
-    cipher.final(),
-  ]);
+  const ciphertext = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
   const authTag = cipher.getAuthTag();
 
   // Zero out the plaintext data key from memory immediately after use
@@ -86,7 +83,10 @@ export async function decryptField(encrypted: string): Promise<string> {
   if (parts.length !== 4) throw new Error('Invalid encrypted field format');
 
   const [encryptedDataKeyB64, ivB64, authTagB64, ciphertextB64] = parts as [
-    string, string, string, string,
+    string,
+    string,
+    string,
+    string,
   ];
 
   const client = getKmsClient();
@@ -106,8 +106,7 @@ export async function decryptField(encrypted: string): Promise<string> {
   decipher.setAuthTag(Buffer.from(authTagB64, 'base64'));
 
   const plaintext =
-    decipher.update(Buffer.from(ciphertextB64, 'base64')).toString('utf8') +
-    decipher.final('utf8');
+    decipher.update(Buffer.from(ciphertextB64, 'base64')).toString('utf8') + decipher.final('utf8');
 
   Buffer.from(dataKey).fill(0);
 
@@ -160,10 +159,7 @@ export function computeDeviceFingerprint(
   ip: string,
   hmacSecret: string,
 ): string {
-  return crypto
-    .createHmac('sha256', hmacSecret)
-    .update(`${userAgent}|${ip}`)
-    .digest('hex');
+  return crypto.createHmac('sha256', hmacSecret).update(`${userAgent}|${ip}`).digest('hex');
 }
 
 // ─── Backup Codes ─────────────────────────────────────────────────────────────

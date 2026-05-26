@@ -58,7 +58,9 @@ export default function LoginPage() {
               autoComplete="email"
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+              }}
               placeholder="you@company.com"
             />
             <Input
@@ -67,7 +69,9 @@ export default function LoginPage() {
               autoComplete="current-password"
               required
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+              }}
               placeholder="••••••••••••"
             />
             <div className="flex items-center justify-end">
@@ -89,7 +93,9 @@ export default function LoginPage() {
             required
             autoFocus
             value={mfaToken}
-            onChange={(e) => setMfaToken(e.target.value)}
+            onChange={(e) => {
+              setMfaToken(e.target.value);
+            }}
             placeholder="000000"
           />
         )}

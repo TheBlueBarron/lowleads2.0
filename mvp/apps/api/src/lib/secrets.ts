@@ -1,7 +1,4 @@
-import {
-  SecretsManagerClient,
-  GetSecretValueCommand,
-} from '@aws-sdk/client-secrets-manager';
+import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
 
 export interface AppSecrets {
   databaseUrl: string;
@@ -52,9 +49,7 @@ async function fetchFromSecretsManager(): Promise<AppSecrets> {
   });
 
   async function getSecret(secretName: string): Promise<Record<string, string>> {
-    const response = await client.send(
-      new GetSecretValueCommand({ SecretId: secretName }),
-    );
+    const response = await client.send(new GetSecretValueCommand({ SecretId: secretName }));
     if (!response.SecretString) {
       throw new Error(`Secret ${secretName} has no string value`);
     }

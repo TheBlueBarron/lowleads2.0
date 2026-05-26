@@ -35,13 +35,21 @@ export function Button({
 
   return (
     <button
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- boolean OR is intentional: disabled if either is true
       disabled={disabled || loading}
       className={cn(base, variants[variant], sizes[size], className)}
       {...props}
     >
       {loading && (
         <svg className="animate-spin h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          />
           <path
             className="opacity-75"
             fill="currentColor"

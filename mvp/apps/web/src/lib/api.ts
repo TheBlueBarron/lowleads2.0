@@ -15,13 +15,13 @@ export class ApiError extends Error {
 export function getToken(): string | null {
   if (typeof document === 'undefined') return null;
   const match = document.cookie.match(/(?:^|; )ll_at=([^;]*)/);
-  return match && match[1] ? decodeURIComponent(match[1]) : null;
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
 }
 
 export function setToken(accessToken: string, expiresIn: number): void {
   if (typeof document === 'undefined') return;
   const secure = location.protocol === 'https:' ? '; Secure' : '';
-  document.cookie = `ll_at=${encodeURIComponent(accessToken)}; path=/; max-age=${expiresIn}; SameSite=Strict${secure}`;
+  document.cookie = `ll_at=${encodeURIComponent(accessToken)}; path=/; max-age=${String(expiresIn)}; SameSite=Strict${secure}`;
 }
 
 export function clearToken(): void {
@@ -41,8 +41,8 @@ export interface JwtPayload {
 export function decodeJwt(token: string): JwtPayload | null {
   try {
     const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    const b64 = parts[1]!.replace(/-/g, '+').replace(/_/g, '/');
+    if (parts.length !== 3 || !parts[1]) return null;
+    const b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
     const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
     const decoded = atob(padded);
     return JSON.parse(decoded) as JwtPayload;
@@ -108,14 +108,17 @@ export async function apiFetch<T>(
   }
 
   if (!res.ok) {
-    let errBody: { error?: { code?: string; message?: string; details?: Record<string, unknown> } } =
-      {};
+    let errBody: {
+      error?: { code?: string; message?: string; details?: Record<string, unknown> };
+    } = {};
     try {
       errBody = (await res.json()) as typeof errBody;
-    } catch { /* noop */ }
+    } catch {
+      /* noop */
+    }
     throw new ApiError(
       errBody.error?.code ?? 'UNKNOWN_ERROR',
-      errBody.error?.message ?? `Request failed (${res.status})`,
+      errBody.error?.message ?? `Request failed (${String(res.status)})`,
       res.status,
       errBody.error?.details,
     );

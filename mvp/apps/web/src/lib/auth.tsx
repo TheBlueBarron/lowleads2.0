@@ -89,7 +89,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         credentials: 'include',
       });
-    } catch { /* best effort */ }
+    } catch {
+      /* best effort */
+    }
     clearToken();
     setUser(null);
     router.push('/login');

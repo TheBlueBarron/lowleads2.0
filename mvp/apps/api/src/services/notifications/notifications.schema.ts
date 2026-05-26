@@ -4,9 +4,7 @@ export const UpdateNotificationPrefsBody = Type.Object({
   emailNewLead: Type.Optional(Type.Boolean()),
   emailLeadResolved: Type.Optional(Type.Boolean()),
   emailLowEscrow: Type.Optional(Type.Boolean()),
-  lowEscrowThresholdCents: Type.Optional(
-    Type.Number({ minimum: 0, maximum: 1_000_000 }),
-  ),
+  lowEscrowThresholdCents: Type.Optional(Type.Number({ minimum: 0, maximum: 1_000_000 })),
 });
 export type UpdateNotificationPrefsBody = Static<typeof UpdateNotificationPrefsBody>;
 

@@ -1,12 +1,14 @@
-import type { Config } from 'jest';
-
-const config: Config = {
+/** @type {import('jest').Config} */
+module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   rootDir: 'src',
   moduleNameMapper: {
-    '^@lowleads/shared-types$': '<rootDir>/../../packages/shared-types/src/index.ts',
-    '^@lowleads/db$': '<rootDir>/../../packages/db/src/client.ts',
+    '^@lowleads/shared-types$': '<rootDir>/../../../packages/shared-types/src/index.ts',
+    '^@lowleads/db$': '<rootDir>/../../../packages/db/src/client.ts',
+    // TypeScript ESM-style relative imports keep .js extension at source; strip
+    // it so ts-jest resolves the .ts file.
+    '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   setupFiles: ['<rootDir>/__tests__/setup.ts'],
   coverageDirectory: '../coverage',
@@ -17,7 +19,7 @@ const config: Config = {
     '!__tests__/**',
     '!index.ts',
   ],
-  coverageThresholds: {
+  coverageThreshold: {
     global: {
       lines: 80,
     },
@@ -30,5 +32,3 @@ const config: Config = {
   },
   testTimeout: 30_000,
 };
-
-export default config;

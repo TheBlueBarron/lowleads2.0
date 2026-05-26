@@ -68,16 +68,22 @@ export default function BrowsePage() {
           <Input
             placeholder="Search by service type, e.g. HVAC, plumbing…"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+            }}
           />
         </div>
         <Input
           placeholder="Service area (ZIP or city)"
           className="w-48"
           value={serviceArea}
-          onChange={(e) => setServiceArea(e.target.value)}
+          onChange={(e) => {
+            setServiceArea(e.target.value);
+          }}
         />
-        <Button type="submit" loading={loading}>Search</Button>
+        <Button type="submit" loading={loading}>
+          Search
+        </Button>
       </form>
 
       {error && <Alert className="mb-4">{error}</Alert>}
@@ -87,7 +93,9 @@ export default function BrowsePage() {
       {!loading && searched && results.length === 0 && (
         <div className="text-center py-12 text-gray-500">
           <p className="text-sm">No listings found for &ldquo;{query}&rdquo;.</p>
-          <p className="text-xs mt-1">Try a different search term or remove the service area filter.</p>
+          <p className="text-xs mt-1">
+            Try a different search term or remove the service area filter.
+          </p>
         </div>
       )}
 
@@ -104,9 +112,7 @@ export default function BrowsePage() {
                   </div>
                   <p className="text-sm text-indigo-600 font-medium">{r.companyName}</p>
                   {r.serviceArea.length > 0 && (
-                    <p className="text-xs text-gray-400 mt-1">
-                      Serves: {r.serviceArea.join(', ')}
-                    </p>
+                    <p className="text-xs text-gray-400 mt-1">Serves: {r.serviceArea.join(', ')}</p>
                   )}
                   {r.description && (
                     <p className="text-sm text-gray-600 mt-2 line-clamp-2">{r.description}</p>
@@ -120,7 +126,9 @@ export default function BrowsePage() {
                     </p>
                   )}
                   <Link href={`/browse/${r.id}`} className="mt-3 block">
-                    <Button size="sm" className="mt-2">Submit Lead</Button>
+                    <Button size="sm" className="mt-2">
+                      Submit Lead
+                    </Button>
                   </Link>
                 </div>
               </div>
@@ -131,8 +139,16 @@ export default function BrowsePage() {
 
       {!searched && !loading && (
         <div className="text-center py-16 text-gray-400">
-          <svg className="w-12 h-12 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1}
+          <svg
+            className="w-12 h-12 mx-auto mb-3"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1}
               d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
             />
           </svg>

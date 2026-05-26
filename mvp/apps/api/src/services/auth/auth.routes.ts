@@ -97,7 +97,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           userAgent: getUserAgent(request),
         });
 
-        reply.setCookie(REFRESH_TOKEN_COOKIE, result.refreshToken, COOKIE_OPTIONS);
+        void reply.setCookie(REFRESH_TOKEN_COOKIE, result.refreshToken, COOKIE_OPTIONS);
 
         return reply.status(200).send({
           accessToken: result.accessToken,
@@ -130,7 +130,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
 
         const result = await service.refresh(refreshToken);
 
-        reply.setCookie(REFRESH_TOKEN_COOKIE, result.refreshToken, COOKIE_OPTIONS);
+        void reply.setCookie(REFRESH_TOKEN_COOKIE, result.refreshToken, COOKIE_OPTIONS);
 
         return reply.status(200).send({
           accessToken: result.accessToken,
@@ -156,7 +156,7 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
     async (request: FastifyRequest, reply: FastifyReply) => {
       const refreshToken = request.cookies[REFRESH_TOKEN_COOKIE] ?? '';
       await service.logout(refreshToken);
-      reply.clearCookie(REFRESH_TOKEN_COOKIE, { path: COOKIE_OPTIONS.path });
+      void reply.clearCookie(REFRESH_TOKEN_COOKIE, { path: COOKIE_OPTIONS.path });
       return reply.status(204).send();
     },
   );
