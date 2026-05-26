@@ -91,15 +91,17 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  // TRUNCATE on append-only tables (escrow_transactions, audit_log) bypasses
+  // their no-DELETE triggers; regular DELETE for the rest.
   const pool = getPrimaryPool();
   await pool.query(`
     DELETE FROM leads;
-    DELETE FROM escrow_transactions;
+    TRUNCATE escrow_transactions RESTART IDENTITY CASCADE;
     DELETE FROM service_listings;
     DELETE FROM technicians;
     DELETE FROM users WHERE email LIKE '%@test.example.com';
     DELETE FROM companies WHERE slug LIKE 'lead-%';
-    DELETE FROM audit_log;
+    TRUNCATE audit_log RESTART IDENTITY CASCADE;
   `);
 });
 

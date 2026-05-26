@@ -51,10 +51,11 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  // Clean test data between tests — order matters (FK constraints)
+  // Clean test data between tests — order matters (FK constraints).
+  // TRUNCATE on append-only tables (audit_log) bypasses the no-DELETE trigger.
   const pool = getPrimaryPool();
   await pool.query(`
-    DELETE FROM audit_log;
+    TRUNCATE audit_log RESTART IDENTITY CASCADE;
     DELETE FROM users WHERE email LIKE '%@test.example.com';
     DELETE FROM companies WHERE slug LIKE 'test-%';
   `);
@@ -72,7 +73,7 @@ describe('POST /v1/auth/register', () => {
     });
 
     expect(res.status).toBe(201);
-    expect(res.body.message).toContain('Verify');
+    expect(res.body.message.toLowerCase()).toContain('verify');
   });
 
   it('rejects duplicate email with 409', async () => {

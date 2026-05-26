@@ -51,15 +51,16 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  // TRUNCATE on append-only tables bypasses their no-DELETE triggers.
   const pool = getPrimaryPool();
   await pool.query(`
     DELETE FROM leads;
-    DELETE FROM escrow_transactions;
+    TRUNCATE escrow_transactions RESTART IDENTITY CASCADE;
     DELETE FROM service_listings;
     DELETE FROM technicians;
     DELETE FROM users WHERE email LIKE '%@test.example.com';
     DELETE FROM companies WHERE slug LIKE '%-test-%' OR slug = 'listing-test-co';
-    DELETE FROM audit_log;
+    TRUNCATE audit_log RESTART IDENTITY CASCADE;
   `);
 });
 
