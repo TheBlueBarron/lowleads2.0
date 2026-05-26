@@ -17,6 +17,9 @@ Thumbs.db
 *.tfstate.backup
 *.tfvars
 !terraform/environments/*/terraform.tfvars.example
+!terraform/bootstrap-github-oidc/terraform.tfvars.example
+backend.hcl
+!terraform/environments/*/backend.hcl.example
 .terraform.lock.hcl
 
 # Test artifacts

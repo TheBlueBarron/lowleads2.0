@@ -8,7 +8,10 @@ terraform {
   }
 
   backend "s3" {
-    bucket         = "lowleads-terraform-state-ACCOUNT_ID"
+    # Partial config — bucket is supplied at init time so the account ID is
+    # never committed. Initialise with:
+    #   cp backend.hcl.example backend.hcl   # fill in your account ID
+    #   terraform init -backend-config=backend.hcl
     key            = "production/terraform.tfstate"
     region         = "us-west-2"
     dynamodb_table = "lowleads-terraform-locks"

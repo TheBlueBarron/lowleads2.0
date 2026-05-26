@@ -17,12 +17,12 @@ resource "aws_elasticache_parameter_group" "redis7" {
 
 resource "aws_elasticache_replication_group" "main" {
   replication_group_id = "${var.project}-${var.environment}-redis"
-  description          = "Lowleads ${var.environment} Redis — sessions, rate limits, queues"
+  description          = "Lowleads ${var.environment} Redis - sessions, rate limits, queues"
 
-  node_type            = var.node_type
-  num_cache_clusters   = 2
-  automatic_failover_enabled = true
-  multi_az_enabled     = true
+  node_type                  = var.node_type
+  num_cache_clusters         = var.num_cache_clusters
+  automatic_failover_enabled = var.automatic_failover_enabled
+  multi_az_enabled           = var.multi_az_enabled
 
   engine               = "redis"
   engine_version       = "7.1"
@@ -34,9 +34,9 @@ resource "aws_elasticache_replication_group" "main" {
   at_rest_encryption_enabled  = true
   transit_encryption_enabled  = true
 
-  maintenance_window   = "tue:04:00-tue:05:00"
-  snapshot_window      = "03:00-04:00"
-  snapshot_retention_limit = 7
+  maintenance_window       = "tue:04:00-tue:05:00"
+  snapshot_window          = "03:00-04:00"
+  snapshot_retention_limit = var.snapshot_retention_limit
 
   apply_immediately = var.environment != "production"
 

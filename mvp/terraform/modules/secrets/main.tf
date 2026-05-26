@@ -1,29 +1,23 @@
 # ─── KMS key for field-level encryption (PII, MFA secrets) ───────────────────
 
 resource "aws_kms_key" "field_encryption" {
-  description             = "${var.project} ${var.environment} — field-level encryption (PII, MFA)"
+  description             = "${var.project} ${var.environment} - field-level encryption (PII, MFA)"
   deletion_window_in_days = 30
   enable_key_rotation     = true
 
+  # ECS task role access is granted via the task role's own IAM policy
+  # (see modules/ecs/main.tf: ecs_task_kms). The root principal here
+  # delegates to IAM so that policy is honored. Adding the role here
+  # directly would fail on first apply because the role doesn't exist yet.
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "EnableRootAccess"
-        Effect = "Allow"
+        Sid       = "EnableRootAccess"
+        Effect    = "Allow"
         Principal = { AWS = "arn:aws:iam::${var.aws_account_id}:root" }
-        Action   = "kms:*"
-        Resource = "*"
-      },
-      {
-        Sid    = "AllowECSTaskRole"
-        Effect = "Allow"
-        Principal = { AWS = var.ecs_task_role_arn }
-        Action = [
-          "kms:GenerateDataKey",
-          "kms:Decrypt"
-        ]
-        Resource = "*"
+        Action    = "kms:*"
+        Resource  = "*"
       }
     ]
   })

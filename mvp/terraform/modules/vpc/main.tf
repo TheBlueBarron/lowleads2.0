@@ -136,7 +136,7 @@ resource "aws_route_table_association" "isolated" {
 
 resource "aws_security_group" "alb" {
   name        = "${var.project}-${var.environment}-alb"
-  description = "Application Load Balancer — internet-facing"
+  description = "Application Load Balancer - internet-facing"
   vpc_id      = aws_vpc.main.id
 
   ingress {
@@ -168,7 +168,7 @@ resource "aws_security_group" "alb" {
 
 resource "aws_security_group" "ecs_tasks" {
   name        = "${var.project}-${var.environment}-ecs-tasks"
-  description = "ECS Fargate tasks — accepts traffic from ALB only"
+  description = "ECS Fargate tasks - accepts traffic from ALB only"
   vpc_id      = aws_vpc.main.id
 
   ingress {
@@ -192,7 +192,7 @@ resource "aws_security_group" "ecs_tasks" {
 
 resource "aws_security_group" "rds" {
   name        = "${var.project}-${var.environment}-rds"
-  description = "RDS PostgreSQL — ECS tasks only"
+  description = "RDS PostgreSQL - ECS tasks only"
   vpc_id      = aws_vpc.main.id
 
   ingress {
@@ -215,7 +215,7 @@ resource "aws_security_group" "rds" {
 
 resource "aws_security_group" "redis" {
   name        = "${var.project}-${var.environment}-redis"
-  description = "ElastiCache Redis — ECS tasks only"
+  description = "ElastiCache Redis - ECS tasks only"
   vpc_id      = aws_vpc.main.id
 
   ingress {

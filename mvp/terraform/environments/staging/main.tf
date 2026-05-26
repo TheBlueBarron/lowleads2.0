@@ -8,8 +8,10 @@ terraform {
   }
 
   backend "s3" {
-    # Populated from bootstrap output — run `terraform output backend_config_snippet`
-    bucket         = "lowleads-terraform-state-ACCOUNT_ID"
+    # Partial config — bucket is supplied at init time so the account ID is
+    # never committed. Initialise with:
+    #   cp backend.hcl.example backend.hcl   # fill in your account ID
+    #   terraform init -backend-config=backend.hcl
     key            = "staging/terraform.tfstate"
     region         = "us-west-2"
     dynamodb_table = "lowleads-terraform-locks"
@@ -105,9 +107,16 @@ module "rds" {
   rds_sg_id           = module.vpc.rds_sg_id
   db_username         = var.db_username
   db_password         = var.db_password
-  instance_class      = "db.t4g.medium"
-  replica_instance_class = "db.t4g.medium"
-  tags                = local.common_tags
+
+  # Free-Plan compatible config. Scale up after upgrading AWS account.
+  instance_class              = "db.t3.micro"
+  multi_az                    = false
+  backup_retention_period     = 1
+  enable_enhanced_monitoring  = false
+  enable_performance_insights = false
+  create_replica              = false
+
+  tags = local.common_tags
 }
 
 # ─── ElastiCache ──────────────────────────────────────────────────────────────
@@ -119,17 +128,28 @@ module "elasticache" {
   isolated_subnet_ids = module.vpc.isolated_subnet_ids
   redis_sg_id         = module.vpc.redis_sg_id
   node_type           = "cache.t4g.micro"
-  tags                = local.common_tags
+
+  # Free-Plan compatible: single node, no failover, no multi-AZ.
+  num_cache_clusters         = 1
+  multi_az_enabled           = false
+  automatic_failover_enabled = false
+  snapshot_retention_limit   = 1
+
+  tags = local.common_tags
 }
 
 # ─── CloudFront ───────────────────────────────────────────────────────────────
-
-module "cloudfront" {
-  source                       = "../../modules/cloudfront"
-  project                      = local.project
-  environment                  = local.environment
-  assets_bucket_regional_domain = module.s3.assets_bucket_id == "" ? "" : "${module.s3.assets_bucket_id}.s3.${var.aws_region}.amazonaws.com"
-  logs_bucket_id               = module.s3.logs_bucket_id
-  # domain_aliases and acm_certificate_arn: add after domain is configured
-  tags                         = local.common_tags
-}
+# Temporarily disabled: new AWS accounts must be verified by AWS Support
+# before CloudFront distributions can be created. Re-enable this module
+# once support replies to the verification request. The API does not
+# depend on CloudFront to function — it only fronts the assets bucket.
+#
+# module "cloudfront" {
+#   source                        = "../../modules/cloudfront"
+#   project                       = local.project
+#   environment                   = local.environment
+#   assets_bucket_regional_domain = module.s3.assets_bucket_id == "" ? "" : "${module.s3.assets_bucket_id}.s3.${var.aws_region}.amazonaws.com"
+#   logs_bucket_id                = module.s3.logs_bucket_id
+#   # domain_aliases and acm_certificate_arn: add after domain is configured
+#   tags                          = local.common_tags
+# }

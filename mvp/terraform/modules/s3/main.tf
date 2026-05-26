@@ -32,6 +32,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "assets" {
     id     = "archive-noncurrent"
     status = "Enabled"
 
+    filter {}
+
     noncurrent_version_transition {
       noncurrent_days = 90
       storage_class   = "GLACIER"
@@ -72,6 +74,26 @@ resource "aws_s3_bucket_lifecycle_configuration" "logs" {
     id     = "expire-logs"
     status = "Enabled"
 
+    filter {}
+
     expiration { days = 90 }
   }
+}
+
+# ALB access logging requires an explicit bucket policy granting the
+# regional ELB service account permission to PutObject.
+# us-west-2 ELB account ID: 797873946194
+# https://docs.aws.amazon.com/elasticloadbalancing/latest/application/enable-access-logging.html
+resource "aws_s3_bucket_policy" "logs_alb_access" {
+  bucket = aws_s3_bucket.logs.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid       = "AllowELBAccessLogs"
+      Effect    = "Allow"
+      Principal = { AWS = "arn:aws:iam::797873946194:root" }
+      Action    = "s3:PutObject"
+      Resource  = "${aws_s3_bucket.logs.arn}/alb/AWSLogs/${var.aws_account_id}/*"
+    }]
+  })
 }
