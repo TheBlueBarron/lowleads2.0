@@ -203,13 +203,16 @@ export const TIER_LIMITS = {
     technicianDashboard: true,
     bonusIssuance: true,
   },
-} as const satisfies Record<SubscriptionTier, {
-  technicianAccounts: number;
-  transactionFeeBps: number;
-  multiLocation: boolean;
-  technicianDashboard: boolean;
-  bonusIssuance: boolean;
-}>;
+} as const satisfies Record<
+  SubscriptionTier,
+  {
+    technicianAccounts: number;
+    transactionFeeBps: number;
+    multiLocation: boolean;
+    technicianDashboard: boolean;
+    bonusIssuance: boolean;
+  }
+>;
 
 export const MINIMUM_REWARD_CENTS = 100;
 export const MINIMUM_FEE_CENTS = 100;
