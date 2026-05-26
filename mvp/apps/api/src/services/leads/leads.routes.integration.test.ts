@@ -205,7 +205,8 @@ describe('PATCH /v1/leads/:id/status', () => {
     const pool = getPrimaryPool();
     const listingId = await seedActiveListing(receiver.companyId, 5000);
 
-    // Insert lead directly
+    // Insert lead directly + match listing's active_lead_count so the API
+    // can decrement it without hitting the >= 0 check constraint.
     const leadRes = await pool.query<{ id: string }>(
       `INSERT INTO leads
          (listing_id, receiving_company_id, submitter_user_id,
@@ -216,6 +217,9 @@ describe('PATCH /v1/leads/:id/status', () => {
       [listingId, receiver.companyId, submitter.userId],
     );
     const leadId = leadRes.rows[0]!.id;
+    await pool.query('UPDATE service_listings SET active_lead_count = 1 WHERE id = $1', [
+      listingId,
+    ]);
 
     const res = await request
       .patch(`/v1/leads/${leadId}/status`)
@@ -252,6 +256,9 @@ describe('PATCH /v1/leads/:id/status', () => {
       [listingId, receiver.companyId, submitter.userId],
     );
     const leadId = leadRes.rows[0]!.id;
+    await pool.query('UPDATE service_listings SET active_lead_count = 1 WHERE id = $1', [
+      listingId,
+    ]);
 
     const res = await request
       .patch(`/v1/leads/${leadId}/status`)
