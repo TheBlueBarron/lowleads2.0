@@ -185,6 +185,11 @@ jobs:
   security:
     name: Security Scan
     runs-on: ubuntu-latest
+    permissions:
+      # CodeQL needs to upload SARIF results to the code-scanning API.
+      security-events: write
+      contents: read
+      actions: read
     steps:
       - uses: actions/checkout@v4
 
