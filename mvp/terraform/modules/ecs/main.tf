@@ -299,13 +299,13 @@ resource "aws_ecs_task_definition" "api" {
       }
     }
 
-    healthCheck = {
-      command     = ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
-      interval    = 30
-      timeout     = 5
-      retries     = 3
-      startPeriod = 60
-    }
+    # Container healthcheck intentionally omitted. The runtime image
+    # (gcr.io/distroless/nodejs20-*) has no shell, no wget/curl, and the
+    # node binary is at /nodejs/bin/node — Docker HEALTHCHECK commands
+    # are awkward to run reliably. The ALB target group already health-
+    # checks /health over HTTP from outside the task, which is what
+    # actually gates traffic. If the Node process crashes it exits and
+    # ECS restarts the task, so per-container liveness is redundant.
   }])
 
   tags = var.tags
