@@ -96,8 +96,8 @@ beforeEach(async () => {
   // TRUNCATE on append-only tables bypasses their no-DELETE triggers.
   const pool = getPrimaryPool();
   await pool.query(`
-    DELETE FROM leads;
     TRUNCATE escrow_transactions RESTART IDENTITY CASCADE;
+    DELETE FROM leads;
     DELETE FROM service_listings;
     DELETE FROM technicians;
     TRUNCATE audit_log RESTART IDENTITY CASCADE;
