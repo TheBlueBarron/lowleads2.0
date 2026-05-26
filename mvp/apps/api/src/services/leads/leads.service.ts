@@ -315,10 +315,9 @@ export class LeadService {
         }
       }
 
-      const updatedResult = await client.query<LeadRow>(
-        `SELECT * FROM leads WHERE id = $1`,
-        [leadId],
-      );
+      const updatedResult = await client.query<LeadRow>(`SELECT * FROM leads WHERE id = $1`, [
+        leadId,
+      ]);
 
       await client.query('COMMIT');
 
