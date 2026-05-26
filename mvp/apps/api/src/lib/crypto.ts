@@ -50,7 +50,27 @@ function getKmsClient(): KMSClient {
   return kmsClient;
 }
 
+// In NODE_ENV=test we skip the round-trip to AWS KMS: the test environment
+// has no AWS credentials and we don't want network calls in CI. Instead we
+// generate a random 256-bit data key locally and store it inline so decrypt
+// can read it back. This is NOT secure — only used in tests.
+const TEST_MODE_KEY_MARKER = '__test_inline_key__';
+
 export async function encryptField(plaintext: string, kmsKeyId: string): Promise<string> {
+  if (process.env['NODE_ENV'] === 'test') {
+    const dataKey = crypto.randomBytes(32);
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv('aes-256-gcm', dataKey, iv);
+    const ciphertext = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+    const authTag = cipher.getAuthTag();
+    return [
+      `${TEST_MODE_KEY_MARKER}${dataKey.toString('base64')}`,
+      iv.toString('base64'),
+      authTag.toString('base64'),
+      ciphertext.toString('base64'),
+    ].join(':');
+  }
+
   const client = getKmsClient();
 
   const { Plaintext: dataKey, CiphertextBlob: encryptedDataKey } = await client.send(
@@ -89,12 +109,20 @@ export async function decryptField(encrypted: string): Promise<string> {
     string,
   ];
 
-  const client = getKmsClient();
-  const { Plaintext: dataKey } = await client.send(
-    new DecryptCommand({
-      CiphertextBlob: Buffer.from(encryptedDataKeyB64, 'base64'),
-    }),
-  );
+  let dataKey: Uint8Array | undefined;
+
+  if (encryptedDataKeyB64.startsWith(TEST_MODE_KEY_MARKER)) {
+    // Test-mode key stored inline; no KMS needed.
+    dataKey = Buffer.from(encryptedDataKeyB64.slice(TEST_MODE_KEY_MARKER.length), 'base64');
+  } else {
+    const client = getKmsClient();
+    const result = await client.send(
+      new DecryptCommand({
+        CiphertextBlob: Buffer.from(encryptedDataKeyB64, 'base64'),
+      }),
+    );
+    dataKey = result.Plaintext;
+  }
 
   if (!dataKey) throw new Error('KMS decryption failed');
 
