@@ -315,6 +315,11 @@ export class LeadService {
         }
       }
 
+      const updatedResult = await client.query<LeadRow>(
+        `SELECT * FROM leads WHERE id = $1`,
+        [leadId],
+      );
+
       await client.query('COMMIT');
 
       // Notify submitter of resolution (fire-and-forget)
@@ -322,7 +327,9 @@ export class LeadService {
         this.deps.log.error({ err }, 'Lead resolved notification failed'),
       );
 
-      return { id: leadId, status: newStatus };
+      const updated = updatedResult.rows[0];
+      if (!updated) throw new NotFoundError('Lead');
+      return this.toSummary(updated);
     } catch (err) {
       await client.query('ROLLBACK');
       throw err;
