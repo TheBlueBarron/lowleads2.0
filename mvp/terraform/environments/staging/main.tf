@@ -76,9 +76,9 @@ module "ecs" {
   kms_key_arn       = module.secrets.kms_key_arn
   assets_bucket_arn = module.s3.assets_bucket_arn
   logs_bucket_id    = module.s3.logs_bucket_id
-  app_url           = "https://staging.lowleads.com"
-  # acm_certificate_arn — add after domain is configured
-  image_tag         = var.api_image_tag
+  app_url             = "https://staging.lowleads.com"
+  acm_certificate_arn = "arn:aws:acm:us-west-2:858758524548:certificate/74c92ec0-a86f-4a45-8a74-cc6de09076e3"
+  image_tag           = var.api_image_tag
   desired_count     = 1
   tags              = local.common_tags
 
