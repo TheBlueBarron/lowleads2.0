@@ -300,7 +300,7 @@ resource "aws_ecs_task_definition" "api" {
     }
 
     healthCheck = {
-      command     = ["CMD-SHELL", "wget -qO- http://localhost:3001/health || exit 1"]
+      command     = ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
       interval    = 30
       timeout     = 5
       retries     = 3
