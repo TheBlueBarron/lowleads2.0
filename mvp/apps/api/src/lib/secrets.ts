@@ -18,15 +18,18 @@ export interface AppSecrets {
   twilioAuthToken: string;
 }
 
-const SECRET_NAMES = {
-  database: 'lowleads/database',
-  redis: 'lowleads/redis',
-  jwt: 'lowleads/jwt',
-  kms: 'lowleads/kms',
-  ses: 'lowleads/ses',
-  stripe: 'lowleads/stripe',
-  twilio: 'lowleads/twilio',
-} as const;
+function secretNames(env: string) {
+  const prefix = `lowleads/${env}`;
+  return {
+    database: `${prefix}/database`,
+    redis: `${prefix}/redis`,
+    jwt: `${prefix}/jwt`,
+    kms: `${prefix}/kms`,
+    ses: `${prefix}/ses`,
+    stripe: `${prefix}/stripe`,
+    twilio: `${prefix}/twilio`,
+  };
+}
 
 // Cache secrets in memory for the process lifetime — avoids per-request latency
 let cached: AppSecrets | null = null;
@@ -56,14 +59,15 @@ async function fetchFromSecretsManager(): Promise<AppSecrets> {
     return JSON.parse(response.SecretString) as Record<string, string>;
   }
 
+  const names = secretNames(process.env['NODE_ENV'] ?? 'staging');
   const [db, redis, jwt, kms, ses, stripe, twilio] = await Promise.all([
-    getSecret(SECRET_NAMES.database),
-    getSecret(SECRET_NAMES.redis),
-    getSecret(SECRET_NAMES.jwt),
-    getSecret(SECRET_NAMES.kms),
-    getSecret(SECRET_NAMES.ses),
-    getSecret(SECRET_NAMES.stripe),
-    getSecret(SECRET_NAMES.twilio),
+    getSecret(names.database),
+    getSecret(names.redis),
+    getSecret(names.jwt),
+    getSecret(names.kms),
+    getSecret(names.ses),
+    getSecret(names.stripe),
+    getSecret(names.twilio),
   ]);
 
   return {

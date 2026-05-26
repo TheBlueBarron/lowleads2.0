@@ -132,6 +132,26 @@ resource "aws_iam_role_policy" "ecs_task_kms" {
   })
 }
 
+# Task role needs Secrets Manager access too — the API code fetches its
+# config from Secrets Manager at runtime (via the task role's credentials,
+# not the execution role).
+resource "aws_iam_role_policy" "ecs_task_secrets" {
+  name = "secrets-manager-runtime"
+  role = aws_iam_role.ecs_task.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret",
+      ]
+      Resource = ["arn:aws:secretsmanager:${var.aws_region}:${var.aws_account_id}:secret:lowleads/${var.environment}/*"]
+    }]
+  })
+}
+
 resource "aws_iam_role_policy" "ecs_task_ses" {
   name = "ses-send-email"
   role = aws_iam_role.ecs_task.id
