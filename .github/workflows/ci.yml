@@ -14,6 +14,11 @@ env:
   NODE_VERSION: '20'
   PNPM_VERSION: '9.1.0'
 
+# Workspace lives under mvp/ — run all shell commands from there.
+defaults:
+  run:
+    working-directory: mvp
+
 jobs:
   # ─── Lint ──────────────────────────────────────────────────────────────────
   lint:
@@ -98,14 +103,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: apps/api/coverage/
+          path: mvp/apps/api/coverage/
           retention-days: 7
 
       - name: Comment coverage on PR
         if: github.event_name == 'pull_request'
         uses: davelosert/vitest-coverage-report-action@v2
         with:
-          json-summary-path: apps/api/coverage/coverage-summary.json
+          json-summary-path: mvp/apps/api/coverage/coverage-summary.json
         continue-on-error: true
 
   # ─── Integration tests ─────────────────────────────────────────────────────
@@ -233,8 +238,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: apps/api/Dockerfile
+          context: mvp
+          file: mvp/apps/api/Dockerfile
           push: ${{ github.ref == 'refs/heads/main' }}
           tags: |
             ${{ steps.ecr-login.outputs.registry }}/lowleads/staging/api:${{ github.sha }}
