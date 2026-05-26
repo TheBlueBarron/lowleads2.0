@@ -7,8 +7,7 @@ import { AuthenticationError, ForbiddenError, sendError } from '../lib/errors.js
 
 export default fp(
   async (fastify: FastifyInstance) => {
-    // Decorate all requests with a placeholder — populated by authenticate hook
-    fastify.decorateRequest('user', null);
+    // @fastify/jwt already decorates request.user, so we don't add it again.
 
     // authenticate — attach to routes that require auth
     fastify.decorate(
