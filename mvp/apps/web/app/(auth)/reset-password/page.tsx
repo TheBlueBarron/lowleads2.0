@@ -2,15 +2,24 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState, type FormEvent } from 'react';
+import { Suspense, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { API_URL, ApiError } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Alert } from '@/components/ui/Alert';
+import { PageSpinner } from '@/components/ui/Spinner';
 
 export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<PageSpinner />}>
+      <ResetPasswordForm />
+    </Suspense>
+  );
+}
+
+function ResetPasswordForm() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token') ?? '';
   const [password, setPassword] = useState('');
