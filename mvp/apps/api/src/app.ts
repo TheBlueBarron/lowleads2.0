@@ -86,10 +86,16 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   });
 
   // ─── CORS ──────────────────────────────────────────────────────────────
-  const allowedOrigins =
-    config.appUrl === 'http://localhost:3000'
-      ? ['http://localhost:3000']
-      : ['https://lowleads.com', 'https://www.lowleads.com'];
+  // Strict allowlist (no wildcards — incompatible with credentials: true).
+  // The paired frontend (APP_URL) is always allowed; additional origins
+  // come from ALLOWED_ORIGINS (comma-separated) so new envs/domains don't
+  // require code changes.
+  const extraOrigins = (process.env['ALLOWED_ORIGINS'] ?? '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+
+  const allowedOrigins = Array.from(new Set([config.appUrl, ...extraOrigins]));
 
   await fastify.register(fastifyCors, {
     origin: allowedOrigins,
