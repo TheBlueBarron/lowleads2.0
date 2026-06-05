@@ -375,11 +375,38 @@ export class LeadService {
       [companyId, lead.id, -feeCents, currentBalance],
     );
 
-    // RELEASE tx — payout to submitter (Stripe Transfer deferred to Phase 3)
+    // RELEASE tx (receiver side) — payout leaves the receiver's escrow toward the submitter
     await client.query(
       `INSERT INTO escrow_transactions (company_id, lead_id, type, amount_cents, balance_after_cents)
        VALUES ($1, $2, 'release', $3, $4)`,
       [companyId, lead.id, -payoutCents, currentBalance],
+    );
+
+    // Credit the submitter's company balance with the payout (platform-held-balance
+    // model — money stays in the platform and is paid out manually on request).
+    const submitterCompanyResult = await client.query<{ company_id: string | null }>(
+      'SELECT company_id FROM users WHERE id = $1',
+      [lead.submitter_user_id],
+    );
+    const submitterCompanyId = submitterCompanyResult.rows[0]?.company_id;
+    if (!submitterCompanyId) {
+      // Never silently drop a payout — fail the whole sale so it can be investigated.
+      throw new NotFoundError('Submitter company for lead payout');
+    }
+
+    const submitterBalResult = await client.query<{ escrow_balance_cents: number }>(
+      `UPDATE companies SET escrow_balance_cents = escrow_balance_cents + $1
+       WHERE id = $2
+       RETURNING escrow_balance_cents`,
+      [payoutCents, submitterCompanyId],
+    );
+    const submitterBalance = submitterBalResult.rows[0]?.escrow_balance_cents ?? 0;
+
+    // RELEASE tx (submitter side) — payout lands in the submitter's balance
+    await client.query(
+      `INSERT INTO escrow_transactions (company_id, lead_id, type, amount_cents, balance_after_cents)
+       VALUES ($1, $2, 'release', $3, $4)`,
+      [submitterCompanyId, lead.id, payoutCents, submitterBalance],
     );
   }
 

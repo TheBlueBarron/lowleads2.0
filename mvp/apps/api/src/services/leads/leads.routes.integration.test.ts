@@ -230,15 +230,42 @@ describe('PATCH /v1/leads/:id/status', () => {
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('sale');
 
-    // Verify escrow transactions were recorded
-    const txns = await pool.query(
-      `SELECT type FROM escrow_transactions
+    // reward 5000 @ 600 bps (pro) → fee 300, payout 4700
+    const feeCents = 300;
+    const payoutCents = 5000 - feeCents;
+
+    // Receiver side: a fee row and a release row, both negative
+    const recvTxns = await pool.query<{ type: string; amount_cents: number }>(
+      `SELECT type, amount_cents FROM escrow_transactions
        WHERE company_id = $1 AND lead_id = $2`,
       [receiver.companyId, leadId],
     );
-    const types = txns.rows.map((r: { type: string }) => r.type);
-    expect(types).toContain('fee');
-    expect(types).toContain('release');
+    const recvTypes = recvTxns.rows.map((r) => r.type);
+    expect(recvTypes).toContain('fee');
+    expect(recvTypes).toContain('release');
+    const recvFee = recvTxns.rows.find((r) => r.type === 'fee')!;
+    const recvRelease = recvTxns.rows.find((r) => r.type === 'release')!;
+    expect(recvFee.amount_cents).toBe(-feeCents);
+    expect(recvRelease.amount_cents).toBe(-payoutCents);
+
+    // Submitter side: payout credited to balance + a positive release ledger row
+    const submitterRelease = await pool.query<{ amount_cents: number }>(
+      `SELECT amount_cents FROM escrow_transactions
+       WHERE company_id = $1 AND lead_id = $2 AND type = 'release'`,
+      [submitter.companyId, leadId],
+    );
+    expect(submitterRelease.rows).toHaveLength(1);
+    expect(submitterRelease.rows[0]!.amount_cents).toBe(payoutCents);
+
+    const submitterCompany = await pool.query<{ escrow_balance_cents: number }>(
+      'SELECT escrow_balance_cents FROM companies WHERE id = $1',
+      [submitter.companyId],
+    );
+    // seedCompany defaults to 100000 escrow; submitter earns the payout
+    expect(submitterCompany.rows[0]!.escrow_balance_cents).toBe(100000 + payoutCents);
+
+    // Conservation law: reward = platform fee + submitter payout
+    expect(-recvFee.amount_cents + submitterRelease.rows[0]!.amount_cents).toBe(5000);
   });
 
   it('marks lead as no_sale and refunds escrow', async () => {
