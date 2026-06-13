@@ -11,6 +11,7 @@ export interface AppSecrets {
   cookieSecret: string;
   kmsKeyId: string;
   sesFromEmail: string;
+  resendApiKey: string;
   // Placeholders populated in Phase 2
   stripeSecretKey: string;
   stripeWebhookSecret: string;
@@ -81,6 +82,9 @@ async function fetchFromSecretsManager(): Promise<AppSecrets> {
     cookieSecret: requireStringKey(jwt, 'cookie_secret'),
     kmsKeyId: requireStringKey(kms, 'key_id'),
     sesFromEmail: requireStringKey(ses, 'from_email'),
+    // Optional at load time so the API still boots before the key is populated;
+    // sendEmail() throws a clear error if it's missing when a send is attempted.
+    resendApiKey: ses['resend_api_key'] ?? '',
     stripeSecretKey: requireStringKey(stripe, 'secret_key'),
     stripeWebhookSecret: requireStringKey(stripe, 'webhook_secret'),
     twilioAccountSid: requireStringKey(twilio, 'account_sid'),
@@ -107,6 +111,7 @@ function loadFromEnv(): AppSecrets {
     cookieSecret: requireEnv('COOKIE_SECRET'),
     kmsKeyId: requireEnv('KMS_KEY_ID'),
     sesFromEmail: requireEnv('SES_FROM_EMAIL'),
+    resendApiKey: process.env['RESEND_API_KEY'] ?? '',
     stripeSecretKey: process.env['STRIPE_SECRET_KEY'] ?? 'placeholder',
     stripeWebhookSecret: process.env['STRIPE_WEBHOOK_SECRET'] ?? 'placeholder',
     twilioAccountSid: process.env['TWILIO_ACCOUNT_SID'] ?? 'placeholder',

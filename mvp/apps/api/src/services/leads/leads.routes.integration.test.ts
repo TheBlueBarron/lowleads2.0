@@ -25,6 +25,7 @@ const TEST_SECRETS = {
   cookieSecret: 'lead-test-cookie-secret-32-chars!',
   kmsKeyId: 'test-kms-key',
   sesFromEmail: 'noreply@lowleads.com',
+  resendApiKey: 'test-resend-key',
   stripeSecretKey: 'sk_test_placeholder',
   stripeWebhookSecret: 'whsec_placeholder',
   twilioAccountSid: 'placeholder',

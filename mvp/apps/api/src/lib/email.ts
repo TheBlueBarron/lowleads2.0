@@ -1,13 +1,6 @@
-import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+import { loadSecrets } from './secrets';
 
-let sesClient: SESClient | null = null;
-
-function getSesClient(): SESClient {
-  if (!sesClient) {
-    sesClient = new SESClient({ region: process.env['AWS_REGION'] ?? 'us-west-2' });
-  }
-  return sesClient;
-}
+const RESEND_API_URL = 'https://api.resend.com/emails';
 
 interface EmailOptions {
   to: string;
@@ -23,20 +16,30 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
     return;
   }
 
-  const client = getSesClient();
-  await client.send(
-    new SendEmailCommand({
-      Destination: { ToAddresses: [options.to] },
-      Message: {
-        Subject: { Data: options.subject, Charset: 'UTF-8' },
-        Body: {
-          Html: { Data: options.html, Charset: 'UTF-8' },
-          Text: { Data: options.text, Charset: 'UTF-8' },
-        },
-      },
-      Source: options.fromEmail,
+  const { resendApiKey } = await loadSecrets();
+  if (!resendApiKey) {
+    throw new Error('RESEND_API_KEY is not configured; cannot send email');
+  }
+
+  const response = await fetch(RESEND_API_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${resendApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: options.fromEmail,
+      to: [options.to],
+      subject: options.subject,
+      html: options.html,
+      text: options.text,
     }),
-  );
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Resend send failed (${response.status}): ${body}`);
+  }
 }
 
 export function buildVerificationEmail(opts: {

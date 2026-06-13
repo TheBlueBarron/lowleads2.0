@@ -25,6 +25,7 @@ const TEST_SECRETS = {
   cookieSecret: 'integration-test-cookie-secret-32ch',
   kmsKeyId: 'test-kms-key', // KMS calls mocked in test environment
   sesFromEmail: 'noreply@lowleads.com',
+  resendApiKey: 'test-resend-key',
   stripeSecretKey: 'placeholder',
   stripeWebhookSecret: 'placeholder',
   twilioAccountSid: 'placeholder',
