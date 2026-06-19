@@ -17,9 +17,20 @@ interface TechnicianRow {
   total_leads_submitted: number;
   not_qualified_count: number;
   total_earned_cents: number;
+  escrow_balance_cents: number;
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
+}
+
+interface TechnicianPerformanceRow {
+  id: string;
+  display_name: string;
+  is_active: boolean;
+  escrow_balance_cents: number;
+  leads_submitted: string;
+  leads_closed: string;
+  total_earned_cents: string;
 }
 
 export class TechnicianService {
@@ -87,7 +98,8 @@ export class TechnicianService {
   async list(companyId: string) {
     const result = await this.deps.db.query<TechnicianRow>(
       `SELECT id, user_id, company_id, display_name, total_leads_submitted,
-              not_qualified_count, total_earned_cents, is_active, created_at, updated_at
+              not_qualified_count, total_earned_cents, escrow_balance_cents,
+              is_active, created_at, updated_at
        FROM technicians
        WHERE company_id = $1
        ORDER BY created_at DESC`,
@@ -97,6 +109,51 @@ export class TechnicianService {
       data: result.rows.map((r) => this.toResponse(r)),
       total: result.rows.length,
     };
+  }
+
+  /**
+   * Owner-facing employee performance: per-technician leads submitted, closed
+   * (sale) count, close rate, lifetime earned (from the technician-payee ledger),
+   * and current balance. Counts/earnings use scalar sub-selects rather than joins
+   * to avoid the cartesian-product inflation a leads × ledger join would cause.
+   */
+  async performance(companyId: string) {
+    const result = await this.deps.db.query<TechnicianPerformanceRow>(
+      `SELECT
+         t.id,
+         t.display_name,
+         t.is_active,
+         t.escrow_balance_cents,
+         (SELECT COUNT(*) FROM leads l WHERE l.technician_id = t.id) AS leads_submitted,
+         (SELECT COUNT(*) FROM leads l WHERE l.technician_id = t.id AND l.status = 'sale')
+           AS leads_closed,
+         (SELECT COALESCE(SUM(et.amount_cents), 0)
+            FROM escrow_transactions et
+            WHERE et.technician_id = t.id
+              AND et.payee_type = 'technician'
+              AND et.type = 'release') AS total_earned_cents
+       FROM technicians t
+       WHERE t.company_id = $1
+       ORDER BY t.created_at DESC`,
+      [companyId],
+    );
+
+    const data = result.rows.map((r) => {
+      const leadsSubmitted = parseInt(r.leads_submitted, 10);
+      const leadsClosed = parseInt(r.leads_closed, 10);
+      return {
+        technicianId: r.id,
+        displayName: r.display_name,
+        isActive: r.is_active,
+        leadsSubmitted,
+        leadsClosed,
+        closeRate: leadsSubmitted > 0 ? leadsClosed / leadsSubmitted : 0,
+        totalEarnedCents: parseInt(r.total_earned_cents, 10),
+        balanceCents: r.escrow_balance_cents,
+      };
+    });
+
+    return { data, total: data.length };
   }
 
   async update(companyId: string, technicianId: string, body: UpdateTechnicianBody) {
@@ -138,6 +195,7 @@ export class TechnicianService {
       totalLeadsSubmitted: row.total_leads_submitted,
       notQualifiedCount: row.not_qualified_count,
       totalEarnedCents: row.total_earned_cents,
+      escrowBalanceCents: row.escrow_balance_cents,
       isActive: row.is_active,
       createdAt: row.created_at.toISOString(),
       updatedAt: row.updated_at.toISOString(),

@@ -3,6 +3,7 @@ import { Type } from '@sinclair/typebox';
 import { AuthService } from './auth.service.js';
 import {
   RegisterBody,
+  RegisterTechnicianBody,
   LoginBody,
   MfaVerifyBody,
   PasswordResetRequestBody,
@@ -68,6 +69,32 @@ export async function authRoutes(fastify: FastifyInstance): Promise<void> {
           password: request.body.password,
           companyName: request.body.companyName,
           companySlug: request.body.companySlug,
+        });
+        return reply.status(201).send(result);
+      } catch (err) {
+        if (isAppError(err)) return sendError(reply, err);
+        throw err;
+      }
+    },
+  );
+
+  // ─── POST /auth/register-technician (employee self-registration) ───────────
+  fastify.post<{ Body: RegisterTechnicianBody }>(
+    '/register-technician',
+    {
+      schema: {
+        body: RegisterTechnicianBody,
+        response: { 201: MessageResponse },
+        tags: ['auth'],
+      },
+    },
+    async (request: FastifyRequest<{ Body: RegisterTechnicianBody }>, reply: FastifyReply) => {
+      try {
+        const result = await service.registerTechnician({
+          email: request.body.email,
+          password: request.body.password,
+          displayName: request.body.displayName,
+          companyJoinCode: request.body.companyJoinCode,
         });
         return reply.status(201).send(result);
       } catch (err) {

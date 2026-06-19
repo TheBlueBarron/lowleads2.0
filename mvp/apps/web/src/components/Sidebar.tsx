@@ -2,11 +2,19 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/Button';
 
-const nav = [
+interface NavItem {
+  name: string;
+  href: string;
+  icon: ReactNode;
+  ownerOnly?: boolean;
+}
+
+const nav: NavItem[] = [
   {
     name: 'Dashboard',
     href: '/dashboard',
@@ -64,6 +72,50 @@ const nav = [
     ),
   },
   {
+    name: 'Refer a Lead',
+    href: '/refer',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+        />
+      </svg>
+    ),
+  },
+  {
+    name: 'Auctions',
+    href: '/auctions',
+    ownerOnly: true,
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+        />
+      </svg>
+    ),
+  },
+  {
+    name: 'Employees',
+    href: '/employees',
+    ownerOnly: true,
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6-2a3 3 0 10-2-5.24"
+        />
+      </svg>
+    ),
+  },
+  {
     name: 'Settings',
     href: '/settings',
     icon: (
@@ -104,21 +156,23 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {nav.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-              isActive(item.href)
-                ? 'bg-indigo-600 text-white'
-                : 'text-gray-300 hover:bg-gray-800 hover:text-white',
-            )}
-          >
-            {item.icon}
-            {item.name}
-          </Link>
-        ))}
+        {nav
+          .filter((item) => !item.ownerOnly || user?.role === 'company_owner')
+          .map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                isActive(item.href)
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-gray-300 hover:bg-gray-800 hover:text-white',
+              )}
+            >
+              {item.icon}
+              {item.name}
+            </Link>
+          ))}
       </nav>
 
       {/* User footer */}

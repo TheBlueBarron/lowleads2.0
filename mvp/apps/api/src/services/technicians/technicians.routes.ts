@@ -6,6 +6,7 @@ import {
   TechnicianIdParam,
   TechnicianResponse,
   TechnicianListResponse,
+  TechnicianPerformanceResponse,
 } from './technicians.schema.js';
 import { sendError, isAppError } from '../../lib/errors.js';
 
@@ -47,6 +48,24 @@ export async function technicianRoutes(fastify: FastifyInstance): Promise<void> 
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const result = await service.list(request.user.companyId);
+        return reply.status(200).send(result);
+      } catch (err) {
+        if (isAppError(err)) return sendError(reply, err);
+        throw err;
+      }
+    },
+  );
+
+  // ─── GET /technicians/performance ─────────────────────────────────────────
+  fastify.get(
+    '/performance',
+    {
+      preHandler: fastify.authenticateOwner,
+      schema: { response: { 200: TechnicianPerformanceResponse }, tags: ['technicians'] },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const result = await service.performance(request.user.companyId);
         return reply.status(200).send(result);
       } catch (err) {
         if (isAppError(err)) return sendError(reply, err);

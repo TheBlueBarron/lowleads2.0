@@ -25,6 +25,8 @@ interface LeadRow {
   customer_phone_encrypted: string;
   customer_email_encrypted: string | null;
   notes_encrypted: string | null;
+  customer_address_street_encrypted: string | null;
+  customer_zip: string | null;
   status: string;
   reward_cents: number;
   qualified_bonus_cents: number;
@@ -35,6 +37,19 @@ interface LeadRow {
   updated_at: Date;
 }
 
+/**
+ * Split a net payout (reward − platform fee) 50/50 between an employee and their
+ * employer. On an odd number of cents the company takes the extra cent, so the
+ * two shares always sum exactly to the payout (no money created or lost).
+ */
+export function splitPayout(payoutCents: number): {
+  technicianCents: number;
+  companyCents: number;
+} {
+  const technicianCents = Math.floor(payoutCents / 2);
+  return { technicianCents, companyCents: payoutCents - technicianCents };
+}
+
 // ─── LeadService ──────────────────────────────────────────────────────────────
 
 export class LeadService {
@@ -43,11 +58,15 @@ export class LeadService {
   // ─── Submit ─────────────────────────────────────────────────────────────────
 
   async submit(submitterUserId: string, submitterCompanyId: string, body: SubmitLeadBody) {
-    // Encrypt PII before any DB work
-    const [phoneEncrypted, emailEncrypted, notesEncrypted] = await Promise.all([
+    // Encrypt PII before any DB work. Street address is encrypted like notes;
+    // ZIP is stored in the clear so it can be matched against auction ZIPs.
+    const [phoneEncrypted, emailEncrypted, notesEncrypted, addressEncrypted] = await Promise.all([
       encryptField(body.customerPhone, this.deps.kmsKeyId),
       body.customerEmail ? encryptField(body.customerEmail, this.deps.kmsKeyId) : null,
       body.notes ? encryptField(body.notes, this.deps.kmsKeyId) : null,
+      body.customerAddressStreet
+        ? encryptField(body.customerAddressStreet, this.deps.kmsKeyId)
+        : null,
     ]);
 
     const client = await this.deps.db.connect();
@@ -98,24 +117,39 @@ export class LeadService {
         }
       }
 
+      // If no technician was named explicitly but the submitter is themselves an
+      // employee (has a technician record), attribute the lead to them so it
+      // shows in their stats and the reward split routes to them on a sale.
+      let effectiveTechnicianId = body.technicianId ?? null;
+      if (!effectiveTechnicianId) {
+        const ownTech = await client.query<{ id: string }>(
+          'SELECT id FROM technicians WHERE user_id = $1 AND company_id = $2',
+          [submitterUserId, submitterCompanyId],
+        );
+        effectiveTechnicianId = ownTech.rows[0]?.id ?? null;
+      }
+
       const leadResult = await client.query<LeadRow>(
         `INSERT INTO leads
            (listing_id, receiving_company_id, submitter_user_id, technician_id,
             customer_first_name, customer_last_initial,
             customer_phone_encrypted, customer_email_encrypted, notes_encrypted,
+            customer_address_street_encrypted, customer_zip,
             reward_cents, qualified_bonus_cents)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
          RETURNING *`,
         [
           body.listingId,
           listing.company_id,
           submitterUserId,
-          body.technicianId ?? null,
+          effectiveTechnicianId,
           body.customerFirstName,
           body.customerLastInitial.toUpperCase(),
           phoneEncrypted,
           emailEncrypted,
           notesEncrypted,
+          addressEncrypted,
+          body.customerZip ?? null,
           listing.reward_cents,
           listing.qualified_bonus_cents,
         ],
@@ -130,10 +164,10 @@ export class LeadService {
       );
 
       // Increment technician lead count if applicable
-      if (body.technicianId) {
+      if (effectiveTechnicianId) {
         await client.query(
           'UPDATE technicians SET total_leads_submitted = total_leads_submitted + 1 WHERE id = $1',
-          [body.technicianId],
+          [effectiveTechnicianId],
         );
       }
 
@@ -229,12 +263,16 @@ export class LeadService {
     let customerPhone: string | null = null;
     let customerEmail: string | null = null;
     let notes: string | null = null;
+    let customerAddressStreet: string | null = null;
 
     if (isReceiverOfLead || isReceiver) {
-      [customerPhone, customerEmail, notes] = await Promise.all([
+      [customerPhone, customerEmail, notes, customerAddressStreet] = await Promise.all([
         decryptField(lead.customer_phone_encrypted),
         lead.customer_email_encrypted ? decryptField(lead.customer_email_encrypted) : null,
         lead.notes_encrypted ? decryptField(lead.notes_encrypted) : null,
+        lead.customer_address_street_encrypted
+          ? decryptField(lead.customer_address_street_encrypted)
+          : null,
       ]);
     }
 
@@ -243,7 +281,94 @@ export class LeadService {
       customerPhone,
       customerEmail,
       notes,
+      customerAddressStreet,
     };
+  }
+
+  // ─── Refer: ranked company list for the submission company-selection step ───
+
+  async referCompanies(submitterCompanyId: string, zip: string, categoryId: string, q?: string) {
+    // Standing "Recommended" winner for this ZIP×category (most recent close).
+    const winnerResult = await this.deps.db.query<{ winning_company_id: string }>(
+      `SELECT winning_company_id FROM category_auctions
+       WHERE zip_code = $1 AND category_id = $2 AND status = 'closed'
+         AND winning_company_id IS NOT NULL
+       ORDER BY period_month DESC
+       LIMIT 1`,
+      [zip, categoryId],
+    );
+    const winnerCompanyId = winnerResult.rows[0]?.winning_company_id ?? null;
+
+    // Eligible listings (§5.4): active, in this category, not the submitter's own,
+    // and not at concurrency cap — ineligible listings never appear in the list.
+    const params: unknown[] = [categoryId, submitterCompanyId];
+    let qClause = '';
+    if (q) {
+      params.push(`%${q}%`);
+      qClause = `AND (l.service_name ILIKE $${params.length} OR c.name ILIKE $${params.length})`;
+    }
+
+    const result = await this.deps.db.query<{
+      id: string;
+      company_id: string;
+      company_name: string;
+      service_name: string;
+      service_category: string;
+      reward_cents: number;
+      qualified_bonus_cents: number;
+      sale_count: number;
+      resolved_count: number;
+    }>(
+      `SELECT l.id, l.company_id, c.name AS company_name, l.service_name, l.service_category,
+              l.reward_cents, l.qualified_bonus_cents,
+              (SELECT COUNT(*) FROM leads x WHERE x.listing_id = l.id AND x.status = 'sale')::int
+                AS sale_count,
+              (SELECT COUNT(*) FROM leads x
+                 WHERE x.listing_id = l.id
+                   AND x.status IN ('sale', 'no_sale', 'not_qualified'))::int AS resolved_count
+       FROM service_listings l
+       JOIN companies c ON c.id = l.company_id
+       WHERE l.category_id = $1
+         AND l.status = 'active'
+         AND l.deleted_at IS NULL
+         AND l.company_id <> $2
+         AND l.active_lead_count < l.max_concurrent_sales
+         ${qClause}`,
+      params,
+    );
+
+    const maxReward = Math.max(1, ...result.rows.map((r) => r.reward_cents));
+    const ranked = result.rows
+      .map((r) => {
+        const closeRate = r.resolved_count > 0 ? r.sale_count / r.resolved_count : 0;
+        // Existing ranking formula: reward (normalized) and close rate, 50/50.
+        const score = (r.reward_cents / maxReward) * 0.5 + closeRate * 0.5;
+        return {
+          listingId: r.id,
+          companyId: r.company_id,
+          companyName: r.company_name,
+          serviceName: r.service_name,
+          serviceCategory: r.service_category,
+          rewardCents: r.reward_cents,
+          qualifiedBonusCents: r.qualified_bonus_cents,
+          closeRate,
+          score,
+          recommended: false,
+        };
+      })
+      .sort((a, b) => b.score - a.score);
+
+    // Pin the Recommended winner to #1 — but only if it survived eligibility (§5.4).
+    if (winnerCompanyId) {
+      const idx = ranked.findIndex((x) => x.companyId === winnerCompanyId);
+      if (idx >= 0) {
+        const [winner] = ranked.splice(idx, 1);
+        winner!.recommended = true;
+        ranked.unshift(winner!);
+      }
+    }
+
+    return { data: ranked, total: ranked.length };
   }
 
   // ─── Update Status ──────────────────────────────────────────────────────────
@@ -298,21 +423,14 @@ export class LeadService {
         [lead.listing_id],
       );
 
-      // Update technician counters
-      if (lead.technician_id) {
-        if (newStatus === 'not_qualified') {
-          await client.query(
-            'UPDATE technicians SET not_qualified_count = not_qualified_count + 1 WHERE id = $1',
-            [lead.technician_id],
-          );
-        } else if (newStatus === 'sale') {
-          const feeCents = this.calculateFee(lead.reward_cents, company.transaction_fee_bps);
-          const payoutCents = lead.reward_cents - feeCents;
-          await client.query(
-            'UPDATE technicians SET total_earned_cents = total_earned_cents + $1 WHERE id = $2',
-            [payoutCents, lead.technician_id],
-          );
-        }
+      // Update technician counters. Earnings (total_earned_cents) are handled
+      // inside processSaleEscrow, which credits the actual submitting employee
+      // their share of the split — so we only track not_qualified here.
+      if (lead.technician_id && newStatus === 'not_qualified') {
+        await client.query(
+          'UPDATE technicians SET not_qualified_count = not_qualified_count + 1 WHERE id = $1',
+          [lead.technician_id],
+        );
       }
 
       const updatedResult = await client.query<LeadRow>(`SELECT * FROM leads WHERE id = $1`, [
@@ -382,32 +500,82 @@ export class LeadService {
       [companyId, lead.id, -payoutCents, currentBalance],
     );
 
-    // Credit the submitter's company balance with the payout (platform-held-balance
-    // model — money stays in the platform and is paid out manually on request).
-    const submitterCompanyResult = await client.query<{ company_id: string | null }>(
-      'SELECT company_id FROM users WHERE id = $1',
+    // Resolve the submitter and route the payout (platform-held-balance model —
+    // money stays in the platform and is paid out manually on request).
+    const submitterResult = await client.query<{ company_id: string | null; role: string }>(
+      'SELECT company_id, role FROM users WHERE id = $1',
       [lead.submitter_user_id],
     );
-    const submitterCompanyId = submitterCompanyResult.rows[0]?.company_id;
+    const submitter = submitterResult.rows[0];
+    const submitterCompanyId = submitter?.company_id;
     if (!submitterCompanyId) {
       // Never silently drop a payout — fail the whole sale so it can be investigated.
       throw new NotFoundError('Submitter company for lead payout');
     }
 
-    const submitterBalResult = await client.query<{ escrow_balance_cents: number }>(
-      `UPDATE companies SET escrow_balance_cents = escrow_balance_cents + $1
-       WHERE id = $2
-       RETURNING escrow_balance_cents`,
-      [payoutCents, submitterCompanyId],
-    );
-    const submitterBalance = submitterBalResult.rows[0]?.escrow_balance_cents ?? 0;
+    // If the submitter is an employee (role=technician), the net payout is split
+    // 50/50 between the employee's own balance and their employer's. Otherwise
+    // the submitting company keeps the full payout (unchanged behavior).
+    let technicianId: string | null = null;
+    if (submitter?.role === 'technician') {
+      const techResult = await client.query<{ id: string }>(
+        'SELECT id FROM technicians WHERE user_id = $1',
+        [lead.submitter_user_id],
+      );
+      technicianId = techResult.rows[0]?.id ?? null;
+    }
 
-    // RELEASE tx (submitter side) — payout lands in the submitter's balance
-    await client.query(
-      `INSERT INTO escrow_transactions (company_id, lead_id, type, amount_cents, balance_after_cents)
-       VALUES ($1, $2, 'release', $3, $4)`,
-      [submitterCompanyId, lead.id, payoutCents, submitterBalance],
-    );
+    if (technicianId) {
+      const { technicianCents, companyCents } = splitPayout(payoutCents);
+
+      // Employee's share → their own balance + a 'technician'-payee ledger row.
+      const techBalResult = await client.query<{ escrow_balance_cents: number }>(
+        `UPDATE technicians
+         SET escrow_balance_cents = escrow_balance_cents + $1,
+             total_earned_cents   = total_earned_cents + $1
+         WHERE id = $2
+         RETURNING escrow_balance_cents`,
+        [technicianCents, technicianId],
+      );
+      const techBalance = techBalResult.rows[0]?.escrow_balance_cents ?? 0;
+      await client.query(
+        `INSERT INTO escrow_transactions
+           (company_id, lead_id, type, amount_cents, balance_after_cents, payee_type, technician_id)
+         VALUES ($1, $2, 'release', $3, $4, 'technician', $5)`,
+        [submitterCompanyId, lead.id, technicianCents, techBalance, technicianId],
+      );
+
+      // Employer's share → company balance + a 'company'-payee ledger row.
+      const compBalResult = await client.query<{ escrow_balance_cents: number }>(
+        `UPDATE companies SET escrow_balance_cents = escrow_balance_cents + $1
+         WHERE id = $2
+         RETURNING escrow_balance_cents`,
+        [companyCents, submitterCompanyId],
+      );
+      const compBalance = compBalResult.rows[0]?.escrow_balance_cents ?? 0;
+      await client.query(
+        `INSERT INTO escrow_transactions
+           (company_id, lead_id, type, amount_cents, balance_after_cents, payee_type)
+         VALUES ($1, $2, 'release', $3, $4, 'company')`,
+        [submitterCompanyId, lead.id, companyCents, compBalance],
+      );
+    } else {
+      const submitterBalResult = await client.query<{ escrow_balance_cents: number }>(
+        `UPDATE companies SET escrow_balance_cents = escrow_balance_cents + $1
+         WHERE id = $2
+         RETURNING escrow_balance_cents`,
+        [payoutCents, submitterCompanyId],
+      );
+      const submitterBalance = submitterBalResult.rows[0]?.escrow_balance_cents ?? 0;
+
+      // RELEASE tx (submitter side) — full payout lands in the company balance.
+      await client.query(
+        `INSERT INTO escrow_transactions
+           (company_id, lead_id, type, amount_cents, balance_after_cents, payee_type)
+         VALUES ($1, $2, 'release', $3, $4, 'company')`,
+        [submitterCompanyId, lead.id, payoutCents, submitterBalance],
+      );
+    }
   }
 
   private async processNoSaleEscrow(
@@ -507,6 +675,7 @@ export class LeadService {
       technicianId: row.technician_id,
       customerFirstName: row.customer_first_name,
       customerLastInitial: row.customer_last_initial,
+      customerZip: row.customer_zip,
       status: row.status,
       rewardCents: row.reward_cents,
       qualifiedBonusCents: row.qualified_bonus_cents,

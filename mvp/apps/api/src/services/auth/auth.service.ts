@@ -33,6 +33,7 @@ import {
   TooManyRequestsError,
   ValidationError,
 } from '../../lib/errors.js';
+import { generateUniqueJoinCode } from '../../lib/joincode.js';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -124,16 +125,19 @@ export class AuthService {
 
     const passwordHash = await hashPassword(password);
 
+    // Pre-generate a unique join code (employees use it to self-register).
+    const joinCode = await generateUniqueJoinCode(this.deps.db);
+
     // Transaction: create company then user atomically
     const client = await this.deps.db.connect();
     try {
       await client.query('BEGIN');
 
       const companyResult = await client.query<{ id: string }>(
-        `INSERT INTO companies (name, slug, subscription_tier, transaction_fee_bps, escrow_balance_cents)
-         VALUES ($1, $2, 'free', 800, 0)
+        `INSERT INTO companies (name, slug, subscription_tier, transaction_fee_bps, escrow_balance_cents, join_code)
+         VALUES ($1, $2, 'free', 800, 0, $3)
          RETURNING id`,
-        [companyName, companySlug],
+        [companyName, companySlug, joinCode],
       );
       const company = companyResult.rows[0];
       if (!company) throw new Error('Company insert failed');
@@ -169,6 +173,91 @@ export class AuthService {
         }),
       ).catch((err: unknown) => {
         this.deps.log.error({ err }, 'Failed to send verification email');
+      });
+
+      return { message: 'Registration successful. Check your email to verify your account.' };
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  // ─── Register Technician (employee self-registration) ────────────────────────
+
+  async registerTechnician(params: {
+    email: string;
+    password: string;
+    displayName: string;
+    companyJoinCode: string;
+  }): Promise<{ message: string }> {
+    const { email, password, displayName, companyJoinCode } = params;
+
+    // Resolve the join code to a company. Codes are stored/compared uppercase.
+    const companyResult = await this.deps.db.query<{ id: string }>(
+      'SELECT id FROM companies WHERE join_code = $1 AND deleted_at IS NULL',
+      [companyJoinCode.trim().toUpperCase()],
+    );
+    const company = companyResult.rows[0];
+    if (!company) {
+      throw new ValidationError('Invalid company join code');
+    }
+
+    // Check email uniqueness before hashing (fast path)
+    const existing = await this.deps.db.query<{ id: string }>(
+      'SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL',
+      [email.toLowerCase()],
+    );
+    if (existing.rows.length > 0) {
+      throw new ConflictError('An account with this email already exists');
+    }
+
+    const passwordHash = await hashPassword(password);
+
+    // Transaction: create the technician user and their technician record together.
+    const client = await this.deps.db.connect();
+    try {
+      await client.query('BEGIN');
+
+      const userResult = await client.query<{ id: string }>(
+        `INSERT INTO users (email, password_hash, role, company_id)
+         VALUES ($1, $2, 'technician', $3)
+         RETURNING id`,
+        [email.toLowerCase(), passwordHash, company.id],
+      );
+      const user = userResult.rows[0];
+      if (!user) throw new Error('User insert failed');
+
+      // Technician is immediately active — no owner approval step.
+      await client.query(
+        `INSERT INTO technicians (user_id, company_id, display_name)
+         VALUES ($1, $2, $3)`,
+        [user.id, company.id, displayName],
+      );
+
+      await this.writeAuditLog(client, {
+        eventType: 'technician.self_registered',
+        actorUserId: user.id,
+        actorIp: null,
+        resourceType: 'user',
+        resourceId: user.id,
+        payload: { companyId: company.id, role: 'technician' },
+      });
+
+      await client.query('COMMIT');
+
+      // Send verification email (fire-and-forget — same flow as owner signup)
+      const token = this.signEmailVerificationToken(user.id, email);
+      const verificationLink = `${this.deps.appUrl}/verify-email?token=${token}`;
+      sendEmail(
+        buildVerificationEmail({
+          recipientEmail: email,
+          verificationLink,
+          fromEmail: this.deps.sesFromEmail,
+        }),
+      ).catch((err: unknown) => {
+        this.deps.log.error({ err }, 'Failed to send technician verification email');
       });
 
       return { message: 'Registration successful. Check your email to verify your account.' };

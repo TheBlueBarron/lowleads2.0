@@ -3,6 +3,7 @@ import { CompanyService } from './companies.service.js';
 import {
   UpdateCompanyBody,
   CompanyResponse,
+  JoinCodeResponse,
   EscrowBalanceResponse,
   EscrowHistoryResponse,
   EscrowHistoryQuery,
@@ -47,6 +48,26 @@ export async function companyRoutes(fastify: FastifyInstance): Promise<void> {
     async (request: FastifyRequest<{ Body: UpdateCompanyBody }>, reply: FastifyReply) => {
       try {
         const result = await service.updateProfile(request.user.companyId, request.body);
+        return reply.status(200).send(result);
+      } catch (err) {
+        if (isAppError(err)) return sendError(reply, err);
+        throw err;
+      }
+    },
+  );
+
+  // ─── POST /companies/me/join-code/regenerate ──────────────────────────────
+  // Scoped to /me (the authenticated owner's own company) rather than an :id in
+  // the path — avoids an IDOR surface and matches the rest of this router.
+  fastify.post(
+    '/me/join-code/regenerate',
+    {
+      preHandler: fastify.authenticateOwner,
+      schema: { response: { 200: JoinCodeResponse }, tags: ['companies'] },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const result = await service.regenerateJoinCode(request.user.companyId);
         return reply.status(200).send(result);
       } catch (err) {
         if (isAppError(err)) return sendError(reply, err);

@@ -15,6 +15,18 @@ export const RegisterBody = Type.Object({
 });
 export type RegisterBody = Static<typeof RegisterBody>;
 
+export const RegisterTechnicianBody = Type.Object({
+  email: Type.String({ format: 'email', maxLength: 255 }),
+  password: Type.String({ minLength: 12, maxLength: 128 }),
+  displayName: Type.String({ minLength: 1, maxLength: 255 }),
+  companyJoinCode: Type.String({
+    minLength: 4,
+    maxLength: 16,
+    description: 'The join code shared by the company the employee is joining',
+  }),
+});
+export type RegisterTechnicianBody = Static<typeof RegisterTechnicianBody>;
+
 export const LoginBody = Type.Object({
   email: Type.String({ format: 'email' }),
   password: Type.String({ minLength: 1, maxLength: 128 }),

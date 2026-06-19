@@ -1,5 +1,6 @@
 import { describe, it, expect } from '@jest/globals';
 import { MINIMUM_FEE_CENTS } from '@lowleads/shared-types';
+import { splitPayout } from './leads.service.js';
 
 // ─── Escrow fee calculation (extracted for unit testing) ──────────────────────
 
@@ -42,5 +43,30 @@ describe('Escrow fee calculation', () => {
     const feeBps = 800;
     const fee = calculateFee(reward, feeBps);
     expect(reward - fee).toBeGreaterThanOrEqual(0);
+  });
+});
+
+// ─── Employee reward split (50/50, employee vs employer) ──────────────────────
+
+describe('splitPayout', () => {
+  it('splits an even payout exactly in half', () => {
+    expect(splitPayout(4700)).toEqual({ technicianCents: 2350, companyCents: 2350 });
+  });
+
+  it('gives the company the extra cent on an odd payout', () => {
+    expect(splitPayout(4701)).toEqual({ technicianCents: 2350, companyCents: 2351 });
+  });
+
+  it('handles a zero payout', () => {
+    expect(splitPayout(0)).toEqual({ technicianCents: 0, companyCents: 0 });
+  });
+
+  it('never creates or loses money — shares always sum to the payout', () => {
+    for (const payout of [1, 2, 3, 99, 100, 4700, 4701, 123_457]) {
+      const { technicianCents, companyCents } = splitPayout(payout);
+      expect(technicianCents + companyCents).toBe(payout);
+      expect(technicianCents).toBeGreaterThanOrEqual(0);
+      expect(companyCents).toBeGreaterThanOrEqual(0);
+    }
   });
 });

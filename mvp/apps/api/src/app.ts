@@ -17,6 +17,8 @@ import { listingRoutes } from './services/listings/listings.routes.js';
 import { leadRoutes } from './services/leads/leads.routes.js';
 import { stripeRoutes } from './services/stripe/stripe.routes.js';
 import { notificationRoutes } from './services/notifications/notifications.routes.js';
+import { categoryRoutes } from './services/categories/categories.routes.js';
+import { auctionRoutes } from './services/auctions/auctions.routes.js';
 import { isAppError } from './lib/errors.js';
 
 export interface AppConfig extends AppSecrets {
@@ -165,6 +167,8 @@ export async function buildApp(config: AppConfig): Promise<FastifyInstance> {
   await fastify.register(leadRoutes, { prefix: '/v1/leads' });
   await fastify.register(stripeRoutes, { prefix: '/v1/billing' });
   await fastify.register(notificationRoutes, { prefix: '/v1/notifications' });
+  await fastify.register(categoryRoutes, { prefix: '/v1/categories' });
+  await fastify.register(auctionRoutes, { prefix: '/v1/auctions' });
 
   // ─── Global error handler ───────────────────────────────────────────────
   fastify.setErrorHandler((err, _request, reply) => {

@@ -16,9 +16,15 @@ export const CompanyResponse = Type.Object({
   subscriptionStatus: Type.Union([Type.String(), Type.Null()]),
   transactionFeeBps: Type.Number(),
   escrowBalanceCents: Type.Number(),
+  joinCode: Type.String(),
+  bidCreditBalanceCents: Type.Number(),
   serviceArea: Type.Array(Type.String()),
   verifiedAt: Type.Union([Type.String(), Type.Null()]),
   createdAt: Type.String(),
+});
+
+export const JoinCodeResponse = Type.Object({
+  joinCode: Type.String(),
 });
 
 export const EscrowBalanceResponse = Type.Object({

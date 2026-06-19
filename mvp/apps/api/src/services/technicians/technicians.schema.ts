@@ -25,6 +25,7 @@ export const TechnicianResponse = Type.Object({
   totalLeadsSubmitted: Type.Number(),
   notQualifiedCount: Type.Number(),
   totalEarnedCents: Type.Number(),
+  escrowBalanceCents: Type.Number(),
   isActive: Type.Boolean(),
   createdAt: Type.String(),
   updatedAt: Type.String(),
@@ -32,5 +33,21 @@ export const TechnicianResponse = Type.Object({
 
 export const TechnicianListResponse = Type.Object({
   data: Type.Array(TechnicianResponse),
+  total: Type.Number(),
+});
+
+export const TechnicianPerformanceResponse = Type.Object({
+  data: Type.Array(
+    Type.Object({
+      technicianId: Type.String({ format: 'uuid' }),
+      displayName: Type.String(),
+      isActive: Type.Boolean(),
+      leadsSubmitted: Type.Number(),
+      leadsClosed: Type.Number(),
+      closeRate: Type.Number(),
+      totalEarnedCents: Type.Number(),
+      balanceCents: Type.Number(),
+    }),
+  ),
   total: Type.Number(),
 });

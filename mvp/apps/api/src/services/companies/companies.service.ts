@@ -1,6 +1,7 @@
 import type { Pool } from 'pg';
 import type { FastifyBaseLogger } from 'fastify';
 import { NotFoundError, ValidationError } from '../../lib/errors.js';
+import { generateUniqueJoinCode } from '../../lib/joincode.js';
 import type { UpdateCompanyBody } from './companies.schema.js';
 
 export interface CompanyServiceDeps {
@@ -17,6 +18,8 @@ interface CompanyRow {
   subscription_status: string | null;
   transaction_fee_bps: number;
   escrow_balance_cents: number;
+  join_code: string;
+  bid_credit_balance_cents: number;
   service_area: string[];
   verified_at: Date | null;
   created_at: Date;
@@ -39,7 +42,8 @@ export class CompanyService {
   async getProfile(companyId: string) {
     const result = await this.deps.db.query<CompanyRow>(
       `SELECT id, name, slug, stripe_customer_id, subscription_tier, subscription_status,
-              transaction_fee_bps, escrow_balance_cents, service_area, verified_at, created_at, updated_at
+              transaction_fee_bps, escrow_balance_cents, join_code, bid_credit_balance_cents,
+              service_area, verified_at, created_at, updated_at
        FROM companies
        WHERE id = $1 AND deleted_at IS NULL`,
       [companyId],
@@ -47,6 +51,19 @@ export class CompanyService {
     const row = result.rows[0];
     if (!row) throw new NotFoundError('Company');
     return this.toResponse(row);
+  }
+
+  async regenerateJoinCode(companyId: string): Promise<{ joinCode: string }> {
+    const joinCode = await generateUniqueJoinCode(this.deps.db);
+    const result = await this.deps.db.query<{ join_code: string }>(
+      `UPDATE companies SET join_code = $1
+       WHERE id = $2 AND deleted_at IS NULL
+       RETURNING join_code`,
+      [joinCode, companyId],
+    );
+    const row = result.rows[0];
+    if (!row) throw new NotFoundError('Company');
+    return { joinCode: row.join_code };
   }
 
   async updateProfile(companyId: string, body: UpdateCompanyBody) {
@@ -149,6 +166,8 @@ export class CompanyService {
       subscriptionStatus: row.subscription_status,
       transactionFeeBps: row.transaction_fee_bps,
       escrowBalanceCents: row.escrow_balance_cents,
+      joinCode: row.join_code,
+      bidCreditBalanceCents: row.bid_credit_balance_cents,
       serviceArea: row.service_area,
       verifiedAt: row.verified_at?.toISOString() ?? null,
       createdAt: row.created_at.toISOString(),

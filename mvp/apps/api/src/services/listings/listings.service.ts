@@ -16,6 +16,7 @@ interface ListingRow {
   company_id: string;
   service_name: string;
   service_category: string;
+  category_id: string | null;
   description: string | null;
   reward_cents: number;
   qualified_bonus_cents: number;
@@ -38,14 +39,15 @@ export class ListingService {
   async create(companyId: string, body: CreateListingBody) {
     const result = await this.deps.db.query<ListingRow>(
       `INSERT INTO service_listings
-         (company_id, service_name, service_category, description,
+         (company_id, service_name, service_category, category_id, description,
           reward_cents, qualified_bonus_cents, max_concurrent_sales, auto_replenish)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
       [
         companyId,
         body.serviceName,
         body.serviceCategory,
+        body.categoryId ?? null,
         body.description ?? null,
         body.rewardCents,
         body.qualifiedBonusCents ?? 0,
@@ -125,6 +127,7 @@ export class ListingService {
     const textFields: [keyof UpdateListingBody, string][] = [
       ['serviceName', 'service_name'],
       ['serviceCategory', 'service_category'],
+      ['categoryId', 'category_id'],
       ['description', 'description'],
     ];
     for (const [key, col] of textFields) {
@@ -490,6 +493,7 @@ export class ListingService {
       companyId: row.company_id,
       serviceName: row.service_name,
       serviceCategory: row.service_category,
+      categoryId: row.category_id,
       description: row.description,
       rewardCents: row.reward_cents,
       qualifiedBonusCents: row.qualified_bonus_cents,

@@ -8,6 +8,8 @@ import {
   LeadSummaryResponse,
   LeadDetailResponse,
   LeadsListResponse,
+  ReferCompaniesQuery,
+  ReferCompaniesResponse,
 } from './leads.schema.js';
 import { sendError, isAppError } from '../../lib/errors.js';
 
@@ -59,6 +61,34 @@ export async function leadRoutes(fastify: FastifyInstance): Promise<void> {
           ...request.query,
           limit: request.query.limit ?? 20,
         });
+        return reply.status(200).send(result);
+      } catch (err) {
+        if (isAppError(err)) return sendError(reply, err);
+        throw err;
+      }
+    },
+  );
+
+  // ─── GET /leads/refer/companies ───────────────────────────────────────────
+  // Ranked company list for the lead-submission company-selection step (§5.1).
+  fastify.get<{ Querystring: ReferCompaniesQuery }>(
+    '/refer/companies',
+    {
+      preHandler: fastify.authenticate,
+      schema: {
+        querystring: ReferCompaniesQuery,
+        response: { 200: ReferCompaniesResponse },
+        tags: ['leads'],
+      },
+    },
+    async (request: FastifyRequest<{ Querystring: ReferCompaniesQuery }>, reply: FastifyReply) => {
+      try {
+        const result = await service.referCompanies(
+          request.user.companyId,
+          request.query.zip,
+          request.query.category_id,
+          request.query.q,
+        );
         return reply.status(200).send(result);
       } catch (err) {
         if (isAppError(err)) return sendError(reply, err);

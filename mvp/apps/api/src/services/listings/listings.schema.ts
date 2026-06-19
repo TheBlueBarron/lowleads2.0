@@ -5,6 +5,9 @@ import { Type, type Static } from '@sinclair/typebox';
 export const CreateListingBody = Type.Object({
   serviceName: Type.String({ minLength: 1, maxLength: 255 }),
   serviceCategory: Type.String({ minLength: 1, maxLength: 100 }),
+  // Leaf category from the curated taxonomy. Drives auction bidding eligibility
+  // and the Recommended ranking. Optional until the taxonomy is fully populated.
+  categoryId: Type.Optional(Type.String({ format: 'uuid' })),
   description: Type.Optional(Type.String({ maxLength: 2000 })),
   rewardCents: Type.Number({
     minimum: 100,
@@ -19,6 +22,7 @@ export type CreateListingBody = Static<typeof CreateListingBody>;
 export const UpdateListingBody = Type.Object({
   serviceName: Type.Optional(Type.String({ minLength: 1, maxLength: 255 })),
   serviceCategory: Type.Optional(Type.String({ minLength: 1, maxLength: 100 })),
+  categoryId: Type.Optional(Type.String({ format: 'uuid' })),
   description: Type.Optional(Type.String({ maxLength: 2000 })),
   rewardCents: Type.Optional(Type.Number({ minimum: 100 })),
   qualifiedBonusCents: Type.Optional(Type.Number({ minimum: 0 })),
@@ -61,6 +65,7 @@ export const ListingResponse = Type.Object({
   companyId: Type.String({ format: 'uuid' }),
   serviceName: Type.String(),
   serviceCategory: Type.String(),
+  categoryId: Type.Union([Type.String({ format: 'uuid' }), Type.Null()]),
   description: Type.Union([Type.String(), Type.Null()]),
   rewardCents: Type.Number(),
   qualifiedBonusCents: Type.Number(),

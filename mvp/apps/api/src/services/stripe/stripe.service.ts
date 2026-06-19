@@ -3,7 +3,7 @@ import type { FastifyBaseLogger } from 'fastify';
 import type Stripe from 'stripe';
 import { getStripe, STRIPE_PRICE_IDS } from '../../lib/stripe.js';
 import { NotFoundError, ValidationError, ConflictError } from '../../lib/errors.js';
-import type { SubscriptionTier } from '@lowleads/shared-types';
+import { type SubscriptionTier, MONTHLY_BID_CREDIT_CENTS } from '@lowleads/shared-types';
 
 export interface StripeServiceDeps {
   db: Pool;
@@ -181,6 +181,9 @@ export class StripeService {
         case 'customer.subscription.deleted':
           await this.handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
           break;
+        case 'invoice.paid':
+          await this.handleInvoicePaid(event.data.object as Stripe.Invoice);
+          break;
         default:
           // Unhandled event types are recorded but not processed
           break;
@@ -261,6 +264,83 @@ export class StripeService {
        WHERE stripe_customer_id = $1`,
       [customerId],
     );
+  }
+
+  // A successful subscription charge (initial or monthly renewal) grants the
+  // company $1,000 of accumulating bid credit. Event-level idempotency in
+  // handleWebhook ensures one grant per invoice even if Stripe re-delivers.
+  private async handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
+    // Only subscription invoices grant credit (not one-off escrow deposits).
+    const reason = invoice.billing_reason;
+    if (reason !== 'subscription_create' && reason !== 'subscription_cycle') return;
+
+    const customerId =
+      typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id;
+    if (!customerId) return;
+
+    const companyResult = await this.deps.db.query<{ id: string }>(
+      `SELECT id FROM companies
+       WHERE stripe_customer_id = $1 AND subscription_tier <> 'free' AND deleted_at IS NULL`,
+      [customerId],
+    );
+    const companyId = companyResult.rows[0]?.id;
+    if (!companyId) return;
+
+    await this.grantBidCredit(companyId, MONTHLY_BID_CREDIT_CENTS);
+  }
+
+  // Increment a company's bid-credit balance and write the append-only ledger
+  // row in one transaction. Exposed for the subscription webhook (and reusable).
+  async grantBidCredit(companyId: string, amountCents: number): Promise<void> {
+    const client = await this.deps.db.connect();
+    try {
+      await client.query('BEGIN');
+      const balResult = await client.query<{ bid_credit_balance_cents: number }>(
+        `UPDATE companies SET bid_credit_balance_cents = bid_credit_balance_cents + $1
+         WHERE id = $2
+         RETURNING bid_credit_balance_cents`,
+        [amountCents, companyId],
+      );
+      const balanceAfter = balResult.rows[0]?.bid_credit_balance_cents ?? 0;
+      await client.query(
+        `INSERT INTO bid_credit_transactions
+           (company_id, type, amount_cents, balance_after_cents)
+         VALUES ($1, 'monthly_grant', $2, $3)`,
+        [companyId, amountCents, balanceAfter],
+      );
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  // Off-session card charge against the company's saved default payment method
+  // (set up when they subscribed). Used for the auction cash top-up at
+  // resolution. Returns the PaymentIntent id on success; throws on failure so
+  // the caller can fall back to the next bidder.
+  async chargeOffSession(
+    companyId: string,
+    amountCents: number,
+    description: string,
+  ): Promise<string> {
+    const customerId = await this.getOrCreateCustomer(companyId);
+    const intent = await this.stripe.paymentIntents.create({
+      customer: customerId,
+      amount: amountCents,
+      currency: 'usd',
+      off_session: true,
+      confirm: true,
+      payment_method_types: ['card'],
+      description,
+      metadata: { companyId, type: 'auction_cash_topup' },
+    });
+    if (intent.status !== 'succeeded') {
+      throw new Error(`Off-session charge not completed (status: ${intent.status})`);
+    }
+    return intent.id;
   }
 
   private tierFromProductId(subscription: Stripe.Subscription): 'pro' | 'enterprise' | null {
