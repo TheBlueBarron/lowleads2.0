@@ -3,7 +3,11 @@ import type { FastifyBaseLogger } from 'fastify';
 import type Stripe from 'stripe';
 import { getStripe, STRIPE_PRICE_IDS } from '../../lib/stripe.js';
 import { NotFoundError, ValidationError, ConflictError } from '../../lib/errors.js';
-import { type SubscriptionTier, MONTHLY_BID_CREDIT_CENTS } from '@lowleads/shared-types';
+import {
+  type SubscriptionTier,
+  MONTHLY_BID_CREDIT_CENTS,
+  TIER_LIMITS,
+} from '@lowleads/shared-types';
 
 export interface StripeServiceDeps {
   db: Pool;
@@ -175,6 +179,11 @@ export class StripeService {
         case 'checkout.session.completed':
           await this.handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
           break;
+        // Stripe fires `created` for a brand-new subscription and `updated` for
+        // subsequent changes; both carry the same object shape. Handle both so a
+        // first-time subscriber's tier is applied (the initial Checkout
+        // `checkout.session.completed` is a no-op for subscriptions).
+        case 'customer.subscription.created':
         case 'customer.subscription.updated':
           await this.handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
           break;
@@ -246,11 +255,15 @@ export class StripeService {
     const tier = this.tierFromProductId(subscription);
     if (!tier) return;
 
+    // Keep the platform fee in sync with the tier (free 800 / pro 600 / ent 400 bps).
+    // Without this, an upgraded company keeps the free-tier 8% fee on lead sales.
+    const transactionFeeBps = TIER_LIMITS[tier].transactionFeeBps;
+
     await this.deps.db.query(
       `UPDATE companies
-       SET subscription_tier = $1, subscription_status = $2
-       WHERE stripe_customer_id = $3`,
-      [tier, subscription.status, customerId],
+       SET subscription_tier = $1, subscription_status = $2, transaction_fee_bps = $3
+       WHERE stripe_customer_id = $4`,
+      [tier, subscription.status, transactionFeeBps, customerId],
     );
   }
 
@@ -278,9 +291,14 @@ export class StripeService {
       typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id;
     if (!customerId) return;
 
+    // Match by customer only — do NOT gate on subscription_tier here. The
+    // billing_reason check above already guarantees this is a subscription
+    // invoice, and Stripe does not guarantee the subscription created/updated
+    // event is processed before invoice.paid. Gating on tier <> 'free' would
+    // silently skip the grant whenever invoice.paid arrives first.
     const companyResult = await this.deps.db.query<{ id: string }>(
       `SELECT id FROM companies
-       WHERE stripe_customer_id = $1 AND subscription_tier <> 'free' AND deleted_at IS NULL`,
+       WHERE stripe_customer_id = $1 AND deleted_at IS NULL`,
       [customerId],
     );
     const companyId = companyResult.rows[0]?.id;
